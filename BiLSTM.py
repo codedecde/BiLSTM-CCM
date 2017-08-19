@@ -23,6 +23,7 @@ def get_arguments():
     parser.add_argument('-use_partial', action="store", default="True", dest="use_partial", type=str)
     parser.add_argument('-thread_ix', action='store', default=0, dest='thread_ix', type=int)
     parser.add_argument('-num_threads', action='store', default=1, dest='num_threads', type=int)
+    parser.add_argument('-partial_mode', action='store', default="em", dest='partial_mode', type=str)
     opts = parser.parse_args(sys.argv[1:])
     assert opts.model in set(['no_features', 'features_with_embeddings', 'features_with_lstm'])
 
@@ -62,7 +63,8 @@ if __name__ == "__main__":
             file_name = MODEL_DIR + options['SAVE_PREFIX']
             model = MF.BiLSTM_Model(options)
             n_epochs = 2
-            model.fit(X=train_X, y=train_y, val_split=0.9, shuffle=True, n_epochs=n_epochs, save_best=True, save_prefix=file_name, X_unlabeled=unlabeled_X, y_unlabeled=unlabeled_y)
+            _mode = args.partial_mode if hasattr(args, 'partial_mode') else 'em'
+            model.fit(X=train_X, y=train_y, val_split=0.9, shuffle=True, n_epochs=n_epochs, save_best=True, save_prefix=file_name, X_unlabeled=unlabeled_X, y_unlabeled=unlabeled_y, mode=_mode)
             bar.update(ix - start_ix + 1)
     else:
         predictions = []

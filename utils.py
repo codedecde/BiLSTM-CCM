@@ -191,3 +191,20 @@ class Progbar(object):
 	def add(self, n, values=None):
 		self.update(self.seen_so_far + n, values)
 
+def get_weights(idx):
+	BASE_DIR = '/scratch/cse/btech/cs1130773/BTP/SupervisedData/LSTM_MODELS/'
+	MODEL_DIR = BASE_DIR + 'MODEL_' + str(idx) + '/'
+	MAX_VAL_ACC = -1
+	best_model = ''
+	for filename in os.listdir(MODEL_DIR):
+		if not filename.startswith('weights'):
+			continue
+		val_acc = int(filename.split('.')[2])
+		if val_acc >= MAX_VAL_ACC:
+			MAX_VAL_ACC = val_acc
+			best_model = filename
+	assert best_model != '', "Could Not find the best model file for directory %s" % (str(idx)) 
+	print 'LOADING FOR IDX', idx, ' FROM FILE', MODEL_DIR + best_model
+	sys.stdout.flush()
+	return MODEL_DIR + best_model
+

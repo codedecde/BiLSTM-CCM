@@ -239,7 +239,7 @@ class BiLSTM_Model(crf.CRF):
                 # 1.2.2 Update the parameters
                 self.train_epoch(data_X, data_y)
 
-    def fit(self, X, y, save_prefix, val_split=0.9, shuffle=False, n_epochs=500, save_best=True, X_unlabeled=None, y_unlabeled=None):
+    def fit(self, X, y, save_prefix, val_split=0.9, shuffle=False, n_epochs=500, save_best=True, X_unlabeled=None, y_unlabeled=None, mode='em'):
         self.set_constraint_penalties(X, y)
         if shuffle:
             X, y = self.shuffle_data(X, y)
@@ -253,7 +253,7 @@ class BiLSTM_Model(crf.CRF):
         for epoch in xrange(n_epochs):
             self.train_epoch(X_train, y_train)
             if X_unlabeled is not None:
-                self.train_with_partial_data(X_train, y_train, X_unlabeled, y_unlabeled)
+                self.train_with_partial_data(X_train, y_train, X_unlabeled, y_unlabeled, mode)
             val_acc = self.save_model(X_val, y_val, save_prefix, save_best, epoch)
             print 'EPOCH: ', epoch, 'DONE WITH VALIDATION ACCURACY: ', val_acc
             sys.stdout.flush()
