@@ -136,9 +136,10 @@ class BiLSTM_Model(crf.CRF):
         else:
             return predictions
 
-    def train_epoch(self, X, y):
+    def train_epoch(self, X, y, show_bar=True):
         optimizer = optim.Adam(self.parameters())
-        bar = Progbar(len(X))
+        if show_bar:
+            bar = Progbar(len(X))
         for ix, (elem, tags) in enumerate(zip(X, y)):
             self.zero_grad()
             sentence, feature_vector = self.get_sentence_feature_vector(elem)
@@ -149,7 +150,8 @@ class BiLSTM_Model(crf.CRF):
             neg_log_likelihood = self.neg_log_likelihood(sentence, feature_vector, targets)
             neg_log_likelihood.backward()
             optimizer.step()
-            bar.update(ix + 1)
+            if show_bar:
+                bar.update(ix + 1)
         print ''
         sys.stdout.flush()
 
@@ -189,7 +191,7 @@ class BiLSTM_Model(crf.CRF):
         return rho_attr
 
     def set_constraint_penalties(self, X, y):
-        self.constraint_penalty = {}        
+        self.constraint_penalty = {}
         self.constraint_penalty['AT_LEAST_ONE_ATTR'] = self.compute_constraint_penalty(X, y)
         # print self.constraint_penalty['AT_LEAST_ONE_ATTR']
 
@@ -200,7 +202,7 @@ class BiLSTM_Model(crf.CRF):
         if mode == 'codl':
             # CoDL
             gamma = 0.9
-            original_params = copy.deepcopy(self.state_dict())            
+            original_params = copy.deepcopy(self.state_dict())
             original_rho = self.constraint_penalty['AT_LEAST_ONE_ATTR']
             data_X = X_unlabeled
             for ix in xrange(NUM_ITERATIONS):
@@ -212,8 +214,11 @@ class BiLSTM_Model(crf.CRF):
                 data_y = y_predictions
                 print '\t Training on %d Observations ' % (len(data_X))
                 self.set_constraint_penalties(data_X, data_y)
-                self.train_epoch(data_X, data_y)
-                # Now update the parameters                 
+                bar = Progbar(NUM_ITERATIONS)
+                for ix in xrange(NUM_ITERATIONS):
+                    self.train_epoch(data_X, data_y, show_bar=False)
+                    bar.update(ix + 1)
+                # Now update the parameters
                 params = self.state_dict()
                 self.constraint_penalty['AT_LEAST_ONE_ATTR'] = (gamma * original_rho) + ((1. - gamma) * self.constraint_penalty['AT_LEAST_ONE_ATTR'])
                 for w in params:
@@ -237,7 +242,10 @@ class BiLSTM_Model(crf.CRF):
                 # 1.2.1 Update the constraints
                 self.set_constraint_penalties(data_X, data_y)
                 # 1.2.2 Update the parameters
-                self.train_epoch(data_X, data_y)
+                bar = Progbar(NUM_ITERATIONS)
+                for ix in xrange(NUM_ITERATIONS):
+                    self.train_epoch(data_X, data_y, show_bar=False)
+                    bar.update(ix + 1)
 
     def fit(self, X, y, save_prefix, val_split=0.9, shuffle=False, n_epochs=500, save_best=True, X_unlabeled=None, y_unlabeled=None, mode='em'):
         self.set_constraint_penalties(X, y)

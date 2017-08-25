@@ -62,7 +62,7 @@ if __name__ == "__main__":
                 os.makedirs(MODEL_DIR)
             file_name = MODEL_DIR + options['SAVE_PREFIX']
             model = MF.BiLSTM_Model(options)
-            n_epochs = 2
+            n_epochs = 10
             _mode = args.partial_mode if hasattr(args, 'partial_mode') else 'em'
             model.fit(X=train_X, y=train_y, val_split=0.9, shuffle=True, n_epochs=n_epochs, save_best=True, save_prefix=file_name, X_unlabeled=unlabeled_X, y_unlabeled=unlabeled_y, mode=_mode)
             bar.update(ix - start_ix + 1)
