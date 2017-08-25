@@ -152,7 +152,8 @@ class BiLSTM_Model(crf.CRF):
             optimizer.step()
             if show_bar:
                 bar.update(ix + 1)
-        print ''
+        if show_bar:
+            print ''
         sys.stdout.flush()
 
     def save_model(self, X_val, y_val, save_prefix, save_best, epoch):
