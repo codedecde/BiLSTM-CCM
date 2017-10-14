@@ -16,6 +16,13 @@ def get_arguments():
         For Predictions : python BiLSTM.py -train_flag False -model <MODEL> -inf_mode <crf/ccm>
 
     '''
+    def convert2boolean(parser, *args_list):
+        for arg in args_list:
+            if hasattr(parser, arg):
+                assert getattr(parser, arg).lower() in set(["true", "false"]), "Invalid boolean argument %s" % arg
+                value = False if getattr(parser, arg).lower() == "false" else True
+                setattr(parser, arg, value)
+        return parser
     parser = argparse.ArgumentParser(description='BiLSTM + CRF')
     parser.add_argument('-model', action="store", default="no_features", dest="model", type=str)
     parser.add_argument('-train_flag', action="store", default="True", dest="train_flag", type=str)
@@ -24,12 +31,11 @@ def get_arguments():
     parser.add_argument('-thread_ix', action='store', default=0, dest='thread_ix', type=int)
     parser.add_argument('-num_threads', action='store', default=1, dest='num_threads', type=int)
     parser.add_argument('-partial_mode', action='store', default="em", dest='partial_mode', type=str)
+    parser.add_argument('-sentence_markers', action='store', default="False", dest='sentence_markers', type=str)
     opts = parser.parse_args(sys.argv[1:])
     assert opts.model in set(['no_features', 'features_with_embeddings', 'features_with_lstm'])
 
-    opts.train_flag = True if opts.train_flag == 'True' else False
-    opts.use_partial = True if opts.use_partial == 'True' else False
-
+    opts = convert2boolean(opts, "train_flag", "use_partial", "sentence_markers")
     opts.inf_mode = opts.inf_mode.lower()
     assert opts.inf_mode in set(['crf', 'ccm'])
     return opts
@@ -76,7 +82,8 @@ if __name__ == "__main__":
             best_model_file = ut.get_best_model_file(file_name)
             model.load_model(best_model_file)
             test_X, test_y = ut.data_generator([posts[ix]], options)
-            _, prediction = model.predict(test_X, mode=args.inf_mode)
+            pdb.set_trace()
+            prediction = model.predict(test_X, mode=args.inf_mode)
             prediction = [options['IX_2_CLASSES'][x] if x in options['IX_2_CLASSES'] else 'O' for x in prediction]
             predictions.append('\n'.join(prediction))
             print 'PREDICTIONS FOR IX: ', ix, 'DONE ...'

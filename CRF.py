@@ -11,7 +11,7 @@ def to_scalar(var):
     return var.view(-1).data.tolist()[0]
 
 
-def log_sum_exp_mat(matrix, axis = -1):
+def log_sum_exp_mat(matrix, axis=-1):
     max_value, _ = torch.max(matrix, axis, keepdim=True)
     if axis != 0:
         ret_value = matrix - max_value.expand(max_value.size(0), matrix.size(-1))
@@ -92,7 +92,7 @@ class CRF(nn.Module):
         best_path.reverse()
         return path_score, best_path
 
-    def _ccm_decode(self, lstm_feats, partial_labels=None):
+    def _ccm_decode(self, lstm_feats, partial_labels=None, sentence_markers=None):
         # --- Collecting the weights ----- #
         if not hasattr(self, 'FILENAME'):
             self.FILENAME = self.options['DATA_DIR'] + 'ilp_problem.lp'
@@ -224,6 +224,35 @@ class CRF(nn.Module):
                     constraints += ' = 1\n'
                     ccm_writebuf += constraints
 
+        # ---- Types are present in only one sentence ---- #
+        sum_constraints = ""
+        used_sent_tokens = []  # Guarding against the case there are one word sentences and such
+        if sentence_markers is not None:
+            start = 0
+            for sent_ix, end in enumerate(sentence_markers):
+                if start == end:
+                    continue
+                sent_token = "Z_{}".format(sent_ix)
+                used_sent_tokens.append(sent_token)
+                sentence_constraints = ""
+                individual_constraints = ""
+                for jx in xrange(start, end):
+                    if jx == 0:
+                        src = self.START_TAG
+                        token = "{}_{}_{}".format(src, "type", jx)
+                        individual_constraints += "{} - {} <= 0\n".format(token, sent_token)
+                        sentence_constraints += "{}".format(token) if sentence_constraints == "" else " + {}".format(token)
+                    else:
+                        for src in tags_used_to_ix:
+                            token = "{}_{}_{}".format(src, "type", jx)
+                            individual_constraints += "{} - {} <= 0\n".format(token, sent_token)
+                            sentence_constraints += "{}".format(token) if sentence_constraints == "" else " + {}".format(token)
+                sentence_constraints += " - {} >= 0\n".format(sent_token)
+                ccm_writebuf += sentence_constraints + individual_constraints
+                sum_constraints += sent_token if sum_constraints == "" else " + {}".format(sent_token)
+                start = end
+            sum_constraints += " = 1\n"
+            ccm_writebuf += sum_constraints
         # --- Declare all variables as binary ------- #
         ccm_writebuf += 'binary\n'
         for ix in xrange(len(weights)):
@@ -232,7 +261,9 @@ class CRF(nn.Module):
                 ccm_writebuf += variable + '\n'
         for dummy_vars in dummy_set:
             ccm_writebuf += dummy_vars + '\n'
-
+        for tok in used_sent_tokens:
+            ccm_writebuf += tok + '\n'
+            dummy_set.add(tok)
         ccm_writebuf += 'end\n'
 
         # --- Now call the ILP solver --------------- #

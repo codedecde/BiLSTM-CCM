@@ -89,7 +89,7 @@ class BiLSTM_Model(crf.CRF):
         gold_score = self._score_sentence(feats, tags)
         return forward_score - gold_score
 
-    def forward(self, sentence, feature_vector=None, mode='crf', partial_labels=None):
+    def forward(self, sentence, feature_vector=None, mode='crf', partial_labels=None, sentence_markers=None):
         mode = mode.lower()
         assert mode in set(['crf', 'ccm'])
         feats = self._get_features(sentence, feature_vector)
@@ -98,19 +98,24 @@ class BiLSTM_Model(crf.CRF):
         if mode == 'crf':
             score, tag_seq = self._viterbi_decode(feats)
         else:
-            score, tag_seq = self._ccm_decode(feats, partial_labels)
+            score, tag_seq = self._ccm_decode(feats, partial_labels, sentence_markers)
         return score, tag_seq
 
     def get_sentence_feature_vector(self, elem):
         if type(elem) == tuple:
             sentence = self.generate_autograd_variable(elem[0])
             feature_vector = autograd.Variable(torch.Tensor(elem[1]).type(self.dtype))
+            if len(elem) == 3:
+                sentence_markers = elem[2]
+            else:
+                sentence_markers = None
         else:
             sentence = self.generate_autograd_variable(elem)
             feature_vector = None
-        return sentence, feature_vector
+        return sentence, feature_vector, sentence_markers
 
     def predict(self, X, mode='crf', partial_labels=None, use_bar=False):
+        use_sentence_markers = self.options['SENTENCE_MARKERS']
         if type(X) != list:
             X = [X]
         predictions = []
@@ -119,18 +124,21 @@ class BiLSTM_Model(crf.CRF):
         else:
             bar = None
         for ix, elem in enumerate(X):
-            sentence, feature_vector = self.get_sentence_feature_vector(elem)
-            if partial_labels is None:
-                _, prediction = self.__call__(sentence, feature_vector, mode)
+            sentence, feature_vector, sentence_markers = self.get_sentence_feature_vector(elem)
+            if use_sentence_markers:
+                assert sentence_markers is not None, "Sentence marker for %d is None" % (ix)
             else:
-                _, prediction = self.__call__(sentence, feature_vector, mode, partial_labels[ix])
+                sentence_markers = None
+            if partial_labels is None:
+                _, prediction = self.__call__(sentence, feature_vector, mode, sentence_markers=sentence_markers)
+            else:
+                _, prediction = self.__call__(sentence, feature_vector, mode, partial_labels[ix], sentence_markers=sentence_markers)
                 for jx in xrange(len(prediction)):
                     if partial_labels[ix][jx] != -1:
                         assert partial_labels[ix][jx] == prediction[jx]
             predictions.append(prediction)
             if bar is not None:
                 bar.update(ix + 1)
-
         if len(predictions) == 1:
             return predictions[0]
         else:
@@ -194,7 +202,6 @@ class BiLSTM_Model(crf.CRF):
     def set_constraint_penalties(self, X, y):
         self.constraint_penalty = {}
         self.constraint_penalty['AT_LEAST_ONE_ATTR'] = self.compute_constraint_penalty(X, y)
-        # print self.constraint_penalty['AT_LEAST_ONE_ATTR']
 
     def train_with_partial_data(self, X_train, y_train, X_unlabeled, y_unlabeled, mode='codl'):
         mode = mode.lower()
