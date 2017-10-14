@@ -2,14 +2,14 @@ import torch
 import torch.autograd as autograd
 import torch.nn as nn
 import subprocess
-from sklearn.metrics import accuracy_score
-import numpy as np
 import pdb
 torch.manual_seed(1)
+
 
 def to_scalar(var):
     # returns a python float
     return var.view(-1).data.tolist()[0]
+
 
 def log_sum_exp_mat(matrix, axis = -1):
     max_value, _ = torch.max(matrix, axis, keepdim=True)
