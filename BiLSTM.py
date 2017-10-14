@@ -82,7 +82,6 @@ if __name__ == "__main__":
             best_model_file = ut.get_best_model_file(file_name)
             model.load_model(best_model_file)
             test_X, test_y = ut.data_generator([posts[ix]], options)
-            pdb.set_trace()
             prediction = model.predict(test_X, mode=args.inf_mode)
             prediction = [options['IX_2_CLASSES'][x] if x in options['IX_2_CLASSES'] else 'O' for x in prediction]
             predictions.append('\n'.join(prediction))

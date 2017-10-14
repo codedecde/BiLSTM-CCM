@@ -150,7 +150,7 @@ class BiLSTM_Model(crf.CRF):
             bar = Progbar(len(X))
         for ix, (elem, tags) in enumerate(zip(X, y)):
             self.zero_grad()
-            sentence, feature_vector = self.get_sentence_feature_vector(elem)
+            sentence, feature_vector, sentence_markers = self.get_sentence_feature_vector(elem)
             if self.GPU:
                 targets = torch.LongTensor(tags).cuda()
             else:
@@ -167,7 +167,7 @@ class BiLSTM_Model(crf.CRF):
     def save_model(self, X_val, y_val, save_prefix, save_best, epoch):
         val_acc = []
         for elem, tags in zip(X_val, y_val):
-            sentence, feature_vector = self.get_sentence_feature_vector(elem)
+            sentence, feature_vector, sentence_markers = self.get_sentence_feature_vector(elem)
             _, predictions = self.__call__(sentence, feature_vector, mode='crf')
             val_acc.append(accuracy_score(tags, predictions))
         val_acc = np.array(val_acc)
@@ -188,7 +188,7 @@ class BiLSTM_Model(crf.CRF):
         state_dict = elem['state_dict']
         self.load_state_dict(state_dict)
 
-    def compute_constraint_penalty(self, X, y):
+    def compute_constraint_penalty(self, y):
         num_satisfied = 0
         for _y in y:
             num_satisfied += 1 if len(filter(lambda x: x == self.tag_to_ix['attr'], _y)) > 0 else 0
@@ -201,7 +201,7 @@ class BiLSTM_Model(crf.CRF):
 
     def set_constraint_penalties(self, X, y):
         self.constraint_penalty = {}
-        self.constraint_penalty['AT_LEAST_ONE_ATTR'] = self.compute_constraint_penalty(X, y)
+        self.constraint_penalty['AT_LEAST_ONE_ATTR'] = self.compute_constraint_penalty(y)
 
     def train_with_partial_data(self, X_train, y_train, X_unlabeled, y_unlabeled, mode='codl'):
         mode = mode.lower()
