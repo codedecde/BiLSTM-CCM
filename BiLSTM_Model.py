@@ -102,16 +102,12 @@ class BiLSTM_Model(crf.CRF):
         return score, tag_seq
 
     def get_sentence_feature_vector(self, elem):
-        if type(elem) == tuple:
-            sentence = self.generate_autograd_variable(elem[0])
-            feature_vector = autograd.Variable(torch.Tensor(elem[1]).type(self.dtype))
-            if len(elem) == 3:
-                sentence_markers = elem[2]
-            else:
-                sentence_markers = None
-        else:
-            sentence = self.generate_autograd_variable(elem)
-            feature_vector = None
+        sentence_markers = None
+        assert type(elem) == tuple, "ERROR. Data has to be 3 tuple"
+        assert len(elem) == 3, "ERROR. Data has to be 3 tuple"
+        sentence = self.generate_autograd_variable(elem[0])
+        feature_vector = autograd.Variable(torch.Tensor(elem[1]).type(self.dtype))
+        sentence_markers = elem[2]
         return sentence, feature_vector, sentence_markers
 
     def predict(self, X, mode='crf', partial_labels=None, use_bar=False):
