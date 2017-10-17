@@ -22,9 +22,9 @@ def log_sum_exp_mat(matrix, axis=-1):
 
 
 class CRF(nn.Module):
-    '''
+    """
         This class implements a linear chain crf in pyTorch.
-    '''
+    """
     def __init__(self, options, GPU=False):
         super(CRF, self).__init__()
         self.GPU = GPU
@@ -153,10 +153,12 @@ class CRF(nn.Module):
                         else:
                             objective_function += ' - ' + token
 
-        # ---- The Attribute constraint (soft) --- #
+        # ---- The Attribute and type occurs in only one sentence constraint (soft) --- #
         if hasattr(self, 'constraint_penalty') and self.constraint_penalty is not None and 'AT_LEAST_ONE_ATTR' in self.constraint_penalty:
+            LARGE_FLOAT = 20.0
             objective_function += ' - ' + str(self.constraint_penalty['AT_LEAST_ONE_ATTR']) + 'D1'
-            dummy_set = set(['D1'])  # A set of Dummy variables used to implement soft constraints
+            objective_function += ' - ' + str(LARGE_FLOAT) + 'D2'
+            dummy_set = set(['D1', 'D2'])  # A set of Dummy variables used to implement soft constraints
             ccm_writebuf += objective_function
         else:
             dummy_set = set([])
@@ -251,7 +253,7 @@ class CRF(nn.Module):
                 ccm_writebuf += sentence_constraints + individual_constraints
                 sum_constraints += sent_token if sum_constraints == "" else " + {}".format(sent_token)
                 start = end
-            sum_constraints += " = 1\n"
+            sum_constraints += " + D2" + " = 1\n"  # Made the constraint soft
             ccm_writebuf += sum_constraints
         # --- Declare all variables as binary ------- #
         ccm_writebuf += 'binary\n'
@@ -268,7 +270,6 @@ class CRF(nn.Module):
 
         # --- Now call the ILP solver --------------- #
         open(self.FILENAME, 'wb').write(ccm_writebuf)
-        # os.system(self.GLPK_LOCATION + ' --cpxlp ' + self.FILENAME + ' -o ' + self.TEMP_FILENAME)
         proc = subprocess.Popen([self.GLPK_LOCATION, '--cpxlp', self.FILENAME, '-o', self.TEMP_FILENAME], stdout=subprocess.PIPE)
         (out, err) = proc.communicate()
         if err is not None:

@@ -27,7 +27,7 @@ def get_options(args):
     options['DATA_PATH'] = DATA_DIR + 'Data_136_with_feats.txt'
 
     # Information associated with using partially labeled data
-    options['USE_PARTIAL'] = args.use_partial
+    options['USE_PARTIAL'] = args.use_partial if hasattr(args, 'use_partial') else False
     options['PARTIAL_DATA_PATH'] = options['DATA_DIR'] + 'partially_labeled_data_with_going_features.txt'
 
     # Threading information
