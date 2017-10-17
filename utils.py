@@ -48,11 +48,9 @@ def data_generator(training_data, options):
             else:
                 post_y.append(options['CLASSES_2_IX'][features[-1]])
         sentence_markers.append(len(post))
-        feat_vectors = np.array(feat_vectors)
-        if options['USE_FEATURES']:
-            post_X = (sentence, feat_vectors, sentence_markers) if options['SENTENCE_MARKERS'] else (sentence, feat_vectors)
-        else:
-            post_X = sentence
+        feat_vectors = np.array(feat_vectors) if len(feat_vectors) > 0 else None
+        sentence_markers = sentence_markers if options['SENTENCE_MARKERS'] else None
+        post_X = (sentence, feat_vectors, sentence_markers)
         X.append(post_X)
         y.append(post_y)
     return X, y

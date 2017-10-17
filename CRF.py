@@ -154,11 +154,14 @@ class CRF(nn.Module):
                             objective_function += ' - ' + token
 
         # ---- The Attribute and type occurs in only one sentence constraint (soft) --- #
+        real_valued_vars = set([])
         if hasattr(self, 'constraint_penalty') and self.constraint_penalty is not None and 'AT_LEAST_ONE_ATTR' in self.constraint_penalty:
-            LARGE_FLOAT = 20.0
+            LARGE_FLOAT = 50.0
             objective_function += ' - ' + str(self.constraint_penalty['AT_LEAST_ONE_ATTR']) + 'D1'
-            objective_function += ' - ' + str(LARGE_FLOAT) + 'D2'
+            if self.options['SENTENCE_MARKERS']:
+                objective_function += ' - ' + str(LARGE_FLOAT) + 'D2'
             dummy_set = set(['D1', 'D2'])  # A set of Dummy variables used to implement soft constraints
+            real_valued_vars.add("D2")
             ccm_writebuf += objective_function
         else:
             dummy_set = set([])
@@ -253,7 +256,7 @@ class CRF(nn.Module):
                 ccm_writebuf += sentence_constraints + individual_constraints
                 sum_constraints += sent_token if sum_constraints == "" else " + {}".format(sent_token)
                 start = end
-            sum_constraints += " + D2" + " = 1\n"  # Made the constraint soft
+            sum_constraints += " - D2" + " = 1\n"  # Made the constraint soft
             ccm_writebuf += sum_constraints
         # --- Declare all variables as binary ------- #
         ccm_writebuf += 'binary\n'
@@ -261,11 +264,12 @@ class CRF(nn.Module):
             for tags in weights[ix]:
                 variable = tags + '_' + str(ix)
                 ccm_writebuf += variable + '\n'
-        for dummy_vars in dummy_set:
-            ccm_writebuf += dummy_vars + '\n'
         for tok in used_sent_tokens:
             ccm_writebuf += tok + '\n'
             dummy_set.add(tok)
+        for dummy_vars in dummy_set:
+            if dummy_vars not in real_valued_vars:
+                ccm_writebuf += dummy_vars + '\n'
         ccm_writebuf += 'end\n'
 
         # --- Now call the ILP solver --------------- #
@@ -275,7 +279,6 @@ class CRF(nn.Module):
         if err is not None:
             print err
         seq_len = int(lstm_feats.size()[0])
-
         tag_seq = self.get_ccm_seq(self.TEMP_FILENAME, seq_len, dummy_set)
         tag_seq_torch = torch.LongTensor(tag_seq).cuda() if self.GPU else torch.LongTensor(tag_seq)
         score = self._score_sentence(lstm_feats, tag_seq_torch)
@@ -327,8 +330,20 @@ class CRF(nn.Module):
                     all_data[index - 1] = (var_name, var_value)
             elif(len(line) == 1):
                 x = line[0].split()
-                index = int(x[0])
-                var_name = x[1]
+                if len(x) == 2:
+                    index = int(x[0])
+                    var_name = x[1]
+                else:
+                    if x[0] == '':
+                        var_value = int(filter(lambda x: x != '', line[1].split())[0])
+                        all_data[index - 1] = (var_name, var_value)
+                    else:
+                        index = int(x[0])
+                        var_name = x[1]
+                        if len(x) > 2:
+                            var_value = int(x[2])
+                            all_data[index - 1] = (var_name, var_value)
+
             if all_data[num_cols - 1] is None:
                 continue
             else:
