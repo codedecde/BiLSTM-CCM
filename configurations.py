@@ -52,4 +52,6 @@ def get_options(args):
             else:
                 options['SAVE_PREFIX'] = 'features_with_embeddings_' + options['SAVE_PREFIX']
 
+    options["mode"] = args.inf_mode if hasattr(args, "inf_mode") else "ccm"
+
     return options
