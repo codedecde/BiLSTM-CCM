@@ -32,3 +32,4 @@ class TestFeatureReader(object):
         reader = DatasetReader.from_params(params)
         instances = reader.read(data_path)
         assert len(instances) == 136
+        import pdb; pdb.set_trace()
