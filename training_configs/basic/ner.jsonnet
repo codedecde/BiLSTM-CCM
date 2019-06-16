@@ -58,17 +58,17 @@
   },
   "iterator": {
     "type": "basic",
-    "batch_size": 64
+    "batch_size": 8
   },
   "trainer": {
     "optimizer": {
         "type": "adam",
         "lr": 0.001
     },
-    "validation_metric": "+f1-measure-overall",
+    "validation_metric": "-loss",
     "num_epochs": 25,
     "grad_norm": 5.0,
-    "patience": 4,
-    "cuda_device": -1
+    "patience": 10,
+    "cuda_device": 0
   }
 }
