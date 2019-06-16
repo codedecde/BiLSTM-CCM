@@ -1,11 +1,33 @@
-import sys,pdb,copy,munkres
+from __future__ import absolute_import
+import os
+import re
+import glob
+import copy
+import itertools
+from typing import List
+import munkres
 import argparse
 '''
     python evaluation.py  -p_file <Prediction Label File> -g_file <Gold Label File> -s_file <Output Label File> (optional)
 '''
 
 
-class post(object):
+def _is_divider(line: str) -> bool:
+    empty_line = line.strip() == ""
+    return empty_line
+
+
+def get_data_from_file(fname: str) -> List[List[str]]:
+    data_points: List[List[str]] = []
+    with open(fname) as datafile:
+        for is_divider, lines in itertools.groupby(datafile, _is_divider):
+            if not is_divider:
+                data_point: List[str] = [line.strip() for line in lines]
+                data_points.append(data_point)
+    return data_points
+
+
+class Post(object):
     def __init__(self):
         self.label2idx = {'type': 0, 'attr': 1, 'location': 2, 'temporal': 3}
         self.raw_post = []
@@ -53,10 +75,10 @@ class post(object):
                 new_instance_list.append(instance_list[idx])
         return new_instance_list
 
-    def set_values(self, post, prediction):
-        post = post.split('\n')
+    def set_values(self, post: List[str], prediction: List[str]):
+        # post = post.split('\n')
         self.post_with_features = copy.deepcopy(post)
-        prediction = prediction.split('\n')
+        # prediction = prediction.split('\n')
         assert(len(post) == len(prediction))
         self.gold_instances = [[] for idx in range(len(self.label2idx))]
         self.prediction_instances = [[] for idx in range(len(self.label2idx))]
@@ -245,20 +267,51 @@ class post(object):
         return write_buf
 
 
-class evaluator(object):
-    def __init__(self, pred_file_name, gold_file_name, verbosity=True):
-        posts = filter(lambda x: x != '', open(gold_file_name).read().split('\n\n'))
-        predictions = filter(lambda x: x != '', open(pred_file_name).read().split('\n\n\n'))
-        # pdb.set_trace()
-        assert(len(posts) == len(predictions))
-        self.posts = [None for idx in range(len(posts))]
-        idx = 0
-        for _post, _prediction in zip(posts, predictions):
-            self.posts[idx] = post()
-            self.posts[idx].set_values(_post, _prediction)
+class Evaluator(object):
+    def __init__(self, posts: List[Post], verbose: bool = True, temporal: bool = False) -> None:
+        self.posts = posts
+        self.verbose = verbose
+        self.temporal = temporal
+
+    @classmethod
+    def from_file(cls, pred_file_name: str, gold_file_name: str, verbose: bool = True) -> "Evaluator":
+        posts = get_data_from_file(gold_file_name)
+        predictions = get_data_from_file(pred_file_name)
+        assert len(posts) == len(predictions)
+        assert all([len(x) == len(y) for x, y in zip(posts, predictions)])
+
+        new_posts = [None for idx in range(len(posts))]
+        for idx, (_post, _prediction) in enumerate(zip(posts, predictions)):
+            new_posts[idx] = Post()
+            new_posts[idx].set_values(_post, _prediction)
             idx += 1
-        self.verbose = verbosity
-        self.temporal = False
+        verbose = verbose
+        temporal = False
+        return cls(new_posts, verbose, temporal)
+
+    @classmethod
+    def from_folder(cls, pred_folder_name: str, gold_file_name: str, verbose: bool = False) -> None:
+        posts = get_data_from_file(gold_file_name)
+        assert os.path.exists(pred_folder_name), f"Folder {pred_folder_name} not found"
+        prediction_files = glob.glob(os.path.join(pred_folder_name, "prediction*"))
+        assert len(prediction_files) == len(posts)
+        predictions: List[List[str]] = [None] * len(posts)
+        for pred_file in prediction_files:
+            fno = int(re.match(r".*prediction_(?P<fno>\d+).txt", pred_file).group("fno"))
+            prediction: List[str] = []
+            with open(pred_file, "r") as f:
+                prediction = [x.strip() for x in f.readlines() if x.strip() != ""]
+                predictions[fno] = prediction
+                assert len(predictions[fno]) == len(posts[fno])
+
+        new_posts = [None for idx in range(len(posts))]
+        for idx, (_post, _prediction) in enumerate(zip(posts, predictions)):
+            new_posts[idx] = Post()
+            new_posts[idx].set_values(_post, _prediction)
+            idx += 1
+        verbose = verbose
+        temporal = False
+        return cls(new_posts, verbose, temporal)
 
     def compute_averages(self):
         label2idx = {'type': 0, 'attr': 1, 'location': 2, 'temporal': 3}
@@ -376,6 +429,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluator Function')
     parser.add_argument('-p_file', dest='p_file', type=str,
                         default='', help='The Prediction File')
+    parser.add_argument('-p_folder', dest='p_folder', type=str,
+                        default='', help='The Prediction Folder')
     parser.add_argument('-g_file', dest='g_file', type=str,
                         default='', help='The Gold File')
     parser.add_argument('-s_file', dest='save_file', type=str,
@@ -383,19 +438,14 @@ if __name__ == "__main__":
     parser.add_argument('-verbose', dest='verbose', type=str,
                         default='True', help='Info to print')
     args = parser.parse_args()
-    assert(args.p_file != '' and args.g_file != '')
-    if args.verbose == 'False':
-        evl = evaluator(args.p_file, args.g_file, False)
-    else:
-        evl = evaluator(args.p_file, args.g_file)
+    assert((args.p_file or args.p_folder) and args.g_file)
+    verbosity = False if args.verbose == "False" else True
+    if args.p_file:
+        evl = Evaluator.from_file(args.p_file, args.g_file, verbosity)
+    elif args.p_folder:
+        evl = Evaluator.from_folder(args.p_folder, args.g_file, verbosity)
     evl.compute_averages()
-    # label2idx = {'type':0, 'attr':1, 'location':2, 'temporal':3}
-    # for post in evl.posts:
-    #   # Precision Difference
-    #   for old_method, new_method in zip(sorted(post.recall_list_mm[1]), sorted(post.recall_list[1])):
-    #       if abs(old_method[0] - new_method[0]) > 0.00001:
-    #           print ' '.join([ elem[0] for elem in post.raw_post])
-    #           print '\n\n'
+
     if args.save_file == '':
         print(evl)
     else:

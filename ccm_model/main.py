@@ -88,7 +88,7 @@ def serial_processing(instances: List[Instance], config: Params, device: int,
                       end_index: Optional[int] = None) -> None:
     start_index = start_index or 0
     end_index = end_index or len(instances)
-    for index in range(start_index, end_index):
+    for index in tqdm.tqdm(range(start_index, end_index)):
         prediction = train_single(config, instances, index, device)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
