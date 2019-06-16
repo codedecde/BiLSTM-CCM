@@ -30,11 +30,11 @@ local bert_embedding_dim = 768;
             "type": "bert-pretrained",
             "pretrained_model": "./data/embeddings/bert/bert-base-multilingual-cased/bert-base-multilingual-cased.tar.gz"
         },
-        "allow_unmatched_keys": true,
-        "embedder_to_indexer_map": {
+      },
+      "allow_unmatched_keys": true,
+      "embedder_to_indexer_map": {
             "bert": ["bert", "bert-offsets"]
-        }
-       },
+      }
     },
     "encoder": {
         "type": "lstm",
