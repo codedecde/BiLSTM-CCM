@@ -14,12 +14,6 @@ def logits():
 
 
 @pytest.fixture(scope="module")
-def viterbi_tags():
-    yield [[2, 4, 3],
-           [4, 2]]
-
-
-@pytest.fixture(scope="module")
 def mask():
     yield np.array([
         [1, 1, 1],
@@ -39,6 +33,14 @@ def transitions():
 
 
 @pytest.fixture(scope="module")
+def constraints():
+    yield [(0, 0), (0, 1),
+           (1, 1), (1, 2),
+           (2, 2), (2, 3),
+           (3, 3), (3, 4),
+           (4, 4), (4, 0)]
+
+@pytest.fixture(scope="module")
 def start_transitions():
     yield np.array([0.1, 0.2, 0.3, 0.4, 0.6])
 
@@ -50,11 +52,27 @@ def end_transitions():
 
 class TestCCMDecode(object):
     def test_ccm_decode(self, logits, mask, transitions,
-                        start_transitions, end_transitions, viterbi_tags):
+                        start_transitions, end_transitions):
         lengths = mask.sum(-1)
+        viterbi_tags = [[2, 4, 3],
+                        [4, 2]]
         predicted_viterbi_tags = []
         for index in range(logits.shape[0]):
             single_logits = logits[index, :lengths[index], :]
             predictions = ccm_decode(single_logits, transitions, start_transitions, end_transitions)
+            predicted_viterbi_tags.append(predictions)
+        assert predicted_viterbi_tags == viterbi_tags
+
+    def test_ccm_decode_with_constraints(self, logits, mask, transitions,
+                                         start_transitions, end_transitions,
+                                         constraints):
+        lengths = mask.sum(-1)
+        viterbi_tags = [[2, 3, 3],
+                        [2, 3]]
+        predicted_viterbi_tags = []
+        for index in range(logits.shape[0]):
+            single_logits = logits[index, :lengths[index], :]
+            predictions = ccm_decode(
+                single_logits, transitions, start_transitions, end_transitions, constraints)
             predicted_viterbi_tags.append(predictions)
         assert predicted_viterbi_tags == viterbi_tags
