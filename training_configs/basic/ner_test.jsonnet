@@ -28,9 +28,7 @@
       "token_embedders": {
         "tokens": {
             "type": "embedding",
-            "embedding_dim": 50,
-            "pretrained_file": "./data/embeddings/glove.6B.50d.txt.gz",
-            "trainable": true
+            "embedding_dim": 50
         },
         "token_characters": {
             "type": "character_encoding",

@@ -1,12 +1,9 @@
 from __future__ import absolute_import
-from typing import List, Tuple, Optional
+from typing import List, Optional
 import argparse
-import multiprocessing as mp
 from copy import deepcopy
 import os
-import time
 import tqdm
-from queue import Empty
 import re
 import random
 
@@ -17,7 +14,7 @@ from allennlp.models import Model
 from allennlp.training import Trainer
 from allennlp.common.util import JsonDict
 
-from utils import read_from_config_file, setup_output_dir
+from utils import read_from_config_file
 from allennlp.common.util import sanitize
 
 
@@ -29,7 +26,7 @@ def get_arguments() -> argparse.Namespace:
                         help="The Output directory file")
     parser.add_argument("-d", "--devices", type=int,
                         default=[-1], nargs="+")
-    # parser.add_argument("--multiprocessing", action="store_true", default=False)
+
     parser.add_argument("-six", "--start_index", type=int, required=False, default=None)
     parser.add_argument("-eix", "--end_index", type=int, required=False, default=None)
     args = parser.parse_args()
@@ -104,53 +101,6 @@ def main(args) -> None:
     instances = reader.read(data_file_path)
     serial_processing(instances, config, args.devices[0],
                       serialization_dir, args.start_index, args.end_index)
-    # if args.multiprocessing:
-    #     multi_process_processing(instances, config, args.devices, serialization_dir)
-    # else:
-
-# def single_process(instances: List[Instance],
-#                    config: Params,
-#                    indices_to_process: List[int],
-#                    serialization_dir: str,
-#                    device_index: int,
-#                    counter: List[int]) -> None:
-#     while True:
-#         try:
-#             index = indices_to_process.get(timeout=5)
-#         except Empty:
-#             break
-#         pred_out = train_single(config, instances, index, device_index)
-#         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
-#             f.write("\n".join(pred_out))
-#         counter.put(1)
-
-
-# def multi_process_processing(instances: List[Instance], config: Params,
-#                              device_list: List[int], serialization_dir: str) -> None:
-#     indices_to_process = mp.Manager().Queue()
-#     for index in range(len(instances)):
-#         indices_to_process.put(index)
-#     num_processes = len(device_list)
-#     jobs = []
-#     counter = mp.Manager().Queue()
-#     for ix in range(num_processes):
-#         proc = mp.Process(target=single_process, args=(
-#             instances,
-#             config,
-#             indices_to_process,
-#             serialization_dir,
-#             device_list[ix],
-#             counter))
-#         proc.start()
-#         jobs.append(proc)
-#     bar = tqdm.tqdm(total=len(instances))
-#     while not indices_to_process.empty():
-#         while not counter.empty():
-#             counter.get()
-#             bar.update(1)
-#         time.sleep(random.randint(1, 5))
-#     for ix, job in enumerate(jobs):
-#         job.join()
 
 
 if __name__ == "__main__":

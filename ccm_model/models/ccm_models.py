@@ -249,15 +249,20 @@ class CcmModel(Model):
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Converts the tag ids to the actual tags.
-        ``output_dict["tags"]`` is a list of lists of tag_ids,
-        so we use an ugly nested list comprehension.
+        We use the CCM module here.
         """
 
         output_dict["tags"] = []
+        _start_transitions = self.crf.start_transitions \
+            if hasattr(self.crf, "start_transitions") else None
+        _end_transitions = self.crf.end_transitions \
+            if hasattr(self.crf, "end_transitions") else None
         logits, mask, transitions, start_transitions, end_transitions = [
-            x.numpy() for x in Metric.unwrap_to_tensors(
-                output_dict["logits"], output_dict["mask"], self.crf.transitions, self.crf.start_transitions,
-                self.crf.end_transitions)
+            (x.numpy() if isinstance(x, torch.Tensor) else x)
+            for x in Metric.unwrap_to_tensors(
+                output_dict["logits"], output_dict["mask"], self.crf.transitions,
+                _start_transitions, _end_transitions
+            )
         ]
         tag_indices: List[List[int]] = self._ccm_module.ccm_tags(
             logits, mask, transitions, start_transitions, end_transitions

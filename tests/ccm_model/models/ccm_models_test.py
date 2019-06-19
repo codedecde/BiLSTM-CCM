@@ -55,6 +55,37 @@ def params():
     yield params
 
 
+@pytest.fixture(scope="function")
+def params_without_start_end_transitions():
+    params = Params({
+        "type": "ccm_model",
+        "label_encoding": "IOB1",
+        "constrain_crf_decoding": True,
+        "calculate_span_f1": True,
+        "include_start_end_transitions": False,
+        "dropout": 0.5,
+        "text_field_embedder": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 50
+                }
+            }
+        },
+        "encoder": {
+            "type": "lstm",
+            "input_size": 50,
+            "hidden_size": 200,
+            "num_layers": 2,
+            "dropout": 0.5,
+            "bidirectional": True
+        },
+        "hard_constraints": ["TYPE"],
+        "soft_constraints": {"ATTR": 0.5}
+    })
+    yield params
+
+
 @pytest.fixture(scope="module")
 def logits():
     yield torch.rand(1, 5, 5)
@@ -82,6 +113,21 @@ class TestCcmModel(object):
                     logits: torch.Tensor, mask: torch.ByteTensor) -> None:
         vocab = Vocabulary.from_instances([instance])
         model = Model.from_params(vocab=vocab, params=params)
+        output_dict = {
+            "loss": 0.124,
+            "logits": logits,
+            "mask": mask
+        }
+        output_dict = model.decode(output_dict)
+        assert len(output_dict["tags"]) == 1
+        assert len(output_dict["tags"][0]) == 5
+
+    def test_decode_without_start_end_transitions(
+        self, instance: Instance, params_without_start_end_transitions: Params,
+        logits: torch.Tensor, mask: torch.ByteTensor
+    ) -> None:
+        vocab = Vocabulary.from_instances([instance])
+        model = Model.from_params(vocab=vocab, params=params_without_start_end_transitions)
         output_dict = {
             "loss": 0.124,
             "logits": logits,

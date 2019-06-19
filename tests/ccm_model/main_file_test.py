@@ -45,7 +45,6 @@ class TestMainFile(object):
         config = inits["config"]
         instances = inits["instances"]
         index = 5
-        prediction = train_single(deepcopy(config), instances, index, -1)
-        out_pred = post_process_prediction(prediction)
+        out_pred = train_single(deepcopy(config), instances, index, -1)
         assert isinstance(out_pred, list)
         assert all([isinstance(x, str) for x in out_pred])
