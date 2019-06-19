@@ -1,13 +1,16 @@
 from __future__ import absolute_import
-from typing import List
+from typing import List, Tuple, Optional
 
 import numpy as np
 import cvxpy as cp
 
 
-def ccm_decode(logits: np.array, transitions: np.array,
-               start_transitions: np.array, end_transitions: np.array) -> List[int]:
-    """Models the viterbi decoding as a Mixed Integer Problem. This allows for
+def ccm_decode(logits: np.array,
+               transitions: np.array,
+               start_transitions: Optional[np.array] = None,
+               end_transitions: Optional[np.array] = None,
+               constraints: Optional[List[Tuple[int, int]]] = None) -> List[int]:
+    """Models the viterbi decoding as a Mixed Integer Linear Problem. This allows for
     incorporating global constraints
     Parameters:
         logits (``Tensor``): seq_len x num_tags
@@ -17,7 +20,26 @@ def ccm_decode(logits: np.array, transitions: np.array,
     Returns:
         tags: List[int]: The ccm based decoded outputs
     """
+
     seq_len, num_tags = logits.shape
+    if start_transitions is None:
+        start_transitions = np.zeros(num_tags)
+    if end_transitions is None:
+        end_transitions = np.zeros(num_tags)
+    constraint_mask = np.ones((num_tags + 2, num_tags + 2))
+    if constraints:
+        constraint_mask *= 0.
+        for i, j in constraints:
+            constraint_mask[i, j] = 1.
+    transitions = (constraint_mask[:num_tags, :num_tags] * transitions) + \
+        ((1. - constraint_mask[:num_tags, :num_tags]) * -10000.)
+    start_tag = num_tags
+    end_tag = num_tags + 1
+    start_transitions = (constraint_mask[start_tag, :num_tags] * start_transitions) + \
+        ((1. - constraint_mask[start_tag, :num_tags]) * -10000.)
+    end_transitions = (constraint_mask[:num_tags, end_tag] * end_transitions) + \
+        ((1. - constraint_mask[:num_tags, end_tag]) * -10000.)
+
     init_weights = np.zeros((num_tags))
     weights = np.zeros((seq_len - 1, num_tags, num_tags))
     for index in range(logits.shape[0]):
@@ -50,7 +72,9 @@ def ccm_decode(logits: np.array, transitions: np.array,
         for common_tag in range(num_tags):
             constraints.append(
                 cp.sum(variables[index][:, common_tag]) ==
-                cp.sum(variables[index + 1][common_tag, :]))
+                cp.sum(variables[index + 1][common_tag, :])
+            )
+    # the final optimization problem
     prob = cp.Problem(objective, constraints)
     prob.solve(solver=cp.GLPK_MI)
     # now we decode the values

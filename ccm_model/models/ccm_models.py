@@ -1,5 +1,5 @@
-from typing import Dict, Optional, List, Any
-
+from typing import Dict, Optional, List, Any, Tuple
+import re
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
@@ -14,14 +14,16 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure, Metric
 
-from ccm_model.utils.ccm_utils import ccm_decode
+# from ccm_model.utils.ccm_utils import ccm_decode
+from ccm_model.modules import ConstrainedConditionalModule
 
 
 @Model.register("ccm_model")
 class CcmModel(Model):
     """
-    The ``CrfTagger`` encodes a sequence of text with a ``Seq2SeqEncoder``,
+    The `CcmModel`` encodes a sequence of text with a ``Seq2SeqEncoder``,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
+    We then use constrained conditional inference to incorporate constraints
 
     Parameters
     ----------
@@ -76,6 +78,8 @@ class CcmModel(Model):
                  calculate_span_f1: bool = None,
                  dropout: Optional[float] = None,
                  verbose_metrics: bool = False,
+                 hard_constraints: List[str] = None,
+                 soft_constraints: Dict[str, float] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -121,7 +125,25 @@ class CcmModel(Model):
                 self.num_tags, constraints,
                 include_start_end_transitions=include_start_end_transitions
         )
-
+        # the ccm constraints
+        hard_constraints = hard_constraints or []
+        hard_constraints_to_indices: Dict[str, List[int]] = {}
+        for tag in hard_constraints:
+            hard_constraints_to_indices[tag] = []
+            for label, index in self.vocab.get_token_to_index_vocabulary(self.label_namespace).items():
+                if re.match(rf"^.*-{tag}", label):
+                    hard_constraints_to_indices[tag].append(index)
+        soft_constraints = soft_constraints or {}
+        soft_constraints_to_indices: Dict[str, Tuple[List[int], float]] = {}
+        for tag, penalty in soft_constraints.items():
+            indices = []
+            for label, index in self.vocab.get_token_to_index_vocabulary(self.label_namespace).items():
+                if re.match(rf"^.*-{tag}", label):
+                    indices.append(index)
+            soft_constraints_to_indices[tag] = (indices, penalty)
+        self._ccm_module = ConstrainedConditionalModule(self.num_tags, constraints,
+                                                        hard_constraints_to_indices,
+                                                        soft_constraints_to_indices)
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
                 "accuracy3": CategoricalAccuracy(top_k=3)
@@ -230,20 +252,21 @@ class CcmModel(Model):
         ``output_dict["tags"]`` is a list of lists of tag_ids,
         so we use an ugly nested list comprehension.
         """
+
         output_dict["tags"] = []
         logits, mask, transitions, start_transitions, end_transitions = [
             x.numpy() for x in Metric.unwrap_to_tensors(
                 output_dict["logits"], output_dict["mask"], self.crf.transitions, self.crf.start_transitions,
                 self.crf.end_transitions)
         ]
-        lengths = output_dict["mask"].astype(int).sum(-1)
-        for index in range(logits.shape[0]):
-            single_logits = logits[index, :lengths[index], :]
-            tag_list: List[int] = ccm_decode(single_logits, transitions, start_transitions, end_transitions)
-            output_dict["tags"].append(
-                [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
-                 for tag in tag_list]
-            )
+        tag_indices: List[List[int]] = self._ccm_module.ccm_tags(
+            logits, mask, transitions, start_transitions, end_transitions
+        )
+        output_dict["tags"] = [
+            [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
+             for tag in tag_list]
+            for tag_list in tag_indices
+        ]
         return output_dict
 
     @overrides
