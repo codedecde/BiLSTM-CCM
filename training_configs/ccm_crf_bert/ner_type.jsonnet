@@ -22,7 +22,7 @@ local bert_embedding_dim = 768;
     "constrain_crf_decoding": true,
     "calculate_span_f1": true,
     "dropout": 0.5,
-    "include_start_end_transitions": false,
+    "include_start_end_transitions": true,
     "text_field_embedder": {
       "type": "basic",
       "token_embedders": {
