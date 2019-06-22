@@ -241,8 +241,6 @@ class CcmModel(Model):
         Converts the tag ids to the actual tags.
         We use the CCM module here.
         """
-
-        output_dict["tags"] = []
         tag_indices: List[List[int]] = []
         if self._ccm_decoder is not None:
             _start_transitions = self.crf.start_transitions \
