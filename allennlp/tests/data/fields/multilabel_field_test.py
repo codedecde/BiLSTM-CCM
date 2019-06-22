@@ -56,6 +56,24 @@ class TestMultiLabelField(AllenNlpTestCase):
         tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0]))
 
+    def test_multilabel_field_returns_correct_empty_sequence(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("label1", namespace="test_empty_labels")
+        vocab.add_token_to_namespace("label2", namespace="test_empty_labels")
+        f = MultiLabelField([], label_namespace="test_empty_labels")
+        f.empty_field()
+
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("rel0", namespace="rel_labels")
+        vocab.add_token_to_namespace("rel1", namespace="rel_labels")
+        vocab.add_token_to_namespace("rel2", namespace="rel_labels")
+
+        f = MultiLabelField(["rel1", "rel0"], label_namespace="rel_labels")
+        f.index(vocab)
+        tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().numpy()
+        f.empty_field()
+        numpy.testing.assert_array_almost_equal(tensor, numpy.array([1, 1, 0]))
+
     def test_class_variables_for_namespace_warnings_work_correctly(self):
         # pylint: disable=protected-access
         assert "text" not in MultiLabelField._already_warned_namespaces

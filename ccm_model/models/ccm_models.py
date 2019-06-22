@@ -71,6 +71,7 @@ class CcmModel(Model):
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  label_namespace: str = "labels",
+                 num_features: Optional[int] = None,
                  feedforward: Optional[FeedForward] = None,
                  label_encoding: Optional[str] = None,
                  include_start_end_transitions: bool = True,
@@ -78,8 +79,7 @@ class CcmModel(Model):
                  calculate_span_f1: bool = None,
                  dropout: Optional[float] = None,
                  verbose_metrics: bool = False,
-                 hard_constraints: List[str] = None,
-                 soft_constraints: Dict[str, float] = None,
+                 ccm_decoder: Optional[ConstrainedConditionalModule] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -89,6 +89,7 @@ class CcmModel(Model):
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
         self._verbose_metrics = verbose_metrics
+
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
         else:
@@ -102,6 +103,8 @@ class CcmModel(Model):
         self.tag_projection_layer = TimeDistributed(Linear(output_dim,
                                                            self.num_tags))
 
+        # Add a ccm decoder if specified
+        self._ccm_decoder = ccm_decoder
         # if  constrain_crf_decoding and calculate_span_f1 are not
         # provided, (i.e., they're None), set them to True
         # if label_encoding is provided and False if it isn't.
@@ -125,25 +128,7 @@ class CcmModel(Model):
                 self.num_tags, constraints,
                 include_start_end_transitions=include_start_end_transitions
         )
-        # the ccm constraints
-        hard_constraints = hard_constraints or []
-        hard_constraints_to_indices: Dict[str, List[int]] = {}
-        for tag in hard_constraints:
-            hard_constraints_to_indices[tag] = []
-            for label, index in self.vocab.get_token_to_index_vocabulary(self.label_namespace).items():
-                if re.match(rf"^.*-{tag}", label):
-                    hard_constraints_to_indices[tag].append(index)
-        soft_constraints = soft_constraints or {}
-        soft_constraints_to_indices: Dict[str, Tuple[List[int], float]] = {}
-        for tag, penalty in soft_constraints.items():
-            indices = []
-            for label, index in self.vocab.get_token_to_index_vocabulary(self.label_namespace).items():
-                if re.match(rf"^.*-{tag}", label):
-                    indices.append(index)
-            soft_constraints_to_indices[tag] = (indices, penalty)
-        self._ccm_module = ConstrainedConditionalModule(self.num_tags, constraints,
-                                                        hard_constraints_to_indices,
-                                                        soft_constraints_to_indices)
+
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
                 "accuracy3": CategoricalAccuracy(top_k=3)
@@ -156,12 +141,14 @@ class CcmModel(Model):
             self._f1_metric = SpanBasedF1Measure(vocab,
                                                  tag_namespace=label_namespace,
                                                  label_encoding=label_encoding)
-
-        check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
+        num_features = num_features or 0
+        check_dimensions_match(text_field_embedder.get_output_dim() + num_features, encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
         if feedforward is not None:
             check_dimensions_match(encoder.get_output_dim(), feedforward.get_input_dim(),
                                    "encoder output dim", "feedforward input dim")
+        if self._ccm_decoder:
+            assert self._ccm_decoder._transition_constraints == constraints
         initializer(self)
 
     @overrides
@@ -169,6 +156,7 @@ class CcmModel(Model):
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None,
+                features: Optional[torch.LongTensor] = None,
                 # pylint: disable=unused-argument
                 **kwargs) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -208,6 +196,8 @@ class CcmModel(Model):
 
         if self.dropout:
             embedded_text_input = self.dropout(embedded_text_input)
+        if features is not None:
+            embedded_text_input = torch.cat([embedded_text_input, features.float()], -1)
 
         encoded_text = self.encoder(embedded_text_input, mask)
 
@@ -253,20 +243,24 @@ class CcmModel(Model):
         """
 
         output_dict["tags"] = []
-        _start_transitions = self.crf.start_transitions \
-            if hasattr(self.crf, "start_transitions") else None
-        _end_transitions = self.crf.end_transitions \
-            if hasattr(self.crf, "end_transitions") else None
-        logits, mask, transitions, start_transitions, end_transitions = [
-            (x.numpy() if isinstance(x, torch.Tensor) else x)
-            for x in Metric.unwrap_to_tensors(
-                output_dict["logits"], output_dict["mask"], self.crf.transitions,
-                _start_transitions, _end_transitions
+        tag_indices: List[List[int]] = []
+        if self._ccm_decoder is not None:
+            _start_transitions = self.crf.start_transitions \
+                if hasattr(self.crf, "start_transitions") else None
+            _end_transitions = self.crf.end_transitions \
+                if hasattr(self.crf, "end_transitions") else None
+            logits, mask, transitions, start_transitions, end_transitions = [
+                (x.numpy() if isinstance(x, torch.Tensor) else x)
+                for x in Metric.unwrap_to_tensors(
+                    output_dict["logits"], output_dict["mask"], self.crf.transitions,
+                    _start_transitions, _end_transitions
+                )
+            ]
+            tag_indices: List[List[int]] = self._ccm_decoder.ccm_tags(
+                logits, mask, transitions, start_transitions, end_transitions
             )
-        ]
-        tag_indices: List[List[int]] = self._ccm_module.ccm_tags(
-            logits, mask, transitions, start_transitions, end_transitions
-        )
+        else:
+            tag_indices = output_dict["tags"]
         output_dict["tags"] = [
             [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
              for tag in tag_list]

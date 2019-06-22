@@ -2,9 +2,12 @@ from __future__ import absolute_import
 from typing import List, Dict, Optional, Tuple
 import numpy as np
 import cvxpy as cp
+import re
 
 from allennlp.data import Vocabulary
-from allennlp.common import Registrable
+from allennlp.common import Registrable, Params
+from allennlp.common.checks import ConfigurationError
+from allennlp.modules.conditional_random_field import allowed_transitions
 
 
 class ConstrainedConditionalModule(Registrable):
@@ -13,7 +16,7 @@ class ConstrainedConditionalModule(Registrable):
                  transition_constraints: Optional[List[Tuple[int, int]]] = None,
                  hard_constraints: Optional[Dict[str, List[int]]] = None,
                  soft_constraints: Optional[Dict[str, Tuple[List[int], float]]] = None) -> None:
-        self._transition_constraints = transition_constraints or {}
+        self._transition_constraints = transition_constraints or []
         self._hard_constraints = hard_constraints or {}
         self._soft_constraints = soft_constraints or {}
         self._num_tags = num_tags
@@ -149,3 +152,37 @@ class ConstrainedConditionalModule(Registrable):
             predicted_tags.append(pred_val)
             assert len(pred_val) == lengths[ix]
         return predicted_tags
+
+    @classmethod
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ConstrainedConditionalModule':
+        hard_constraints = params.pop("hard_constraints", [])
+        soft_constraints = params.pop("soft_constraints", {})
+        label_namespace = params.pop("label_namespace", "labels")
+        constrain_crf_decoding = params.pop("constrain_crf_decoding", None)
+        label_encoding = params.pop("label_encoding", None)
+        hard_constraints_to_indices: Dict[str, List[int]] = {}
+        for tag in hard_constraints:
+            hard_constraints_to_indices[tag] = []
+            for label, index in vocab.get_token_to_index_vocabulary(label_namespace).items():
+                if re.match(rf"^.*-{tag}", label):
+                    hard_constraints_to_indices[tag].append(index)
+        soft_constraints = soft_constraints or {}
+        soft_constraints_to_indices: Dict[str, Tuple[List[int], float]] = {}
+        for tag, penalty in soft_constraints.items():
+            indices = []
+            for label, index in vocab.get_token_to_index_vocabulary(label_namespace).items():
+                if re.match(rf"^.*-{tag}", label):
+                    indices.append(index)
+            soft_constraints_to_indices[tag] = (indices, penalty)
+        num_tags = vocab.get_vocab_size(label_namespace)
+        if constrain_crf_decoding:
+            if not label_encoding:
+                raise ConfigurationError("constrain_crf_decoding is True, but "
+                                         "no label_encoding was specified.")
+            labels = vocab.get_index_to_token_vocabulary(label_namespace)
+            constraints = allowed_transitions(label_encoding, labels)
+        else:
+            constraints = None
+        return ConstrainedConditionalModule(num_tags, constraints,
+                                            hard_constraints_to_indices,
+                                            soft_constraints_to_indices)

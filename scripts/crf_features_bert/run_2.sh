@@ -1,0 +1,1 @@
+/zfsauton3/home/bpatra/miniconda3/bin/python3.6 -m ccm_model.main --config_file training_configs/crf_features_bert/ner.jsonnet --base_dir ./trained_model_outputs/crf_features_bert --devices 0 --start_index 70 --end_index 105
