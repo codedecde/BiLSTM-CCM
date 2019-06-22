@@ -158,7 +158,7 @@ class ConstrainedConditionalModule(Registrable):
         hard_constraints = params.pop("hard_constraints", [])
         soft_constraints = params.pop("soft_constraints", {})
         label_namespace = params.pop("label_namespace", "labels")
-        constrain_crf_decoding = params.pop("constrain_crf_decoding", None)
+        constrain_crf_decoding = params.pop("constrain_crf_decoding", False)
         label_encoding = params.pop("label_encoding", None)
         hard_constraints_to_indices: Dict[str, List[int]] = {}
         for tag in hard_constraints:
@@ -183,6 +183,7 @@ class ConstrainedConditionalModule(Registrable):
             constraints = allowed_transitions(label_encoding, labels)
         else:
             constraints = None
+        params.assert_empty(cls.__name__)
         return ConstrainedConditionalModule(num_tags, constraints,
                                             hard_constraints_to_indices,
                                             soft_constraints_to_indices)

@@ -122,7 +122,6 @@ class CcmModel(Model):
             constraints = allowed_transitions(label_encoding, labels)
         else:
             constraints = None
-
         self.include_start_end_transitions = include_start_end_transitions
         self.crf = ConditionalRandomField(
                 self.num_tags, constraints,
