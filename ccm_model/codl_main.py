@@ -209,8 +209,11 @@ def serial_processing(instances: List[Instance],
         prediction, model = train_single(config, instances, partially_labeled_instances, reader, index, device)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
-        model_save_path = os.path.join(serialization_dir, f"best_model_start_index_{start_index}_end_index_{end_index}.th")
-        torch.save(model.state_dict(), model_save_path)
+        if index == end_index - 1:
+            model_save_path = os.path.join(
+                serialization_dir, f"best_model_start_index_{start_index}_end_index_{end_index}.th"
+            )
+            torch.save(model.state_dict(), model_save_path)
 
 
 def main(args) -> None:
