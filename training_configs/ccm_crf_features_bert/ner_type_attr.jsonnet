@@ -24,6 +24,7 @@ local num_features = 282;
     "label_encoding": "IOB1",
     "constrain_crf_decoding": true,
     "calculate_span_f1": true,
+    "num_features": num_features,
     "dropout": 0.5,
     "include_start_end_transitions": true,
     "text_field_embedder": {
@@ -50,7 +51,7 @@ local num_features = 282;
     "ccm_decoder": {
         "label_namespace": "labels",
         "label_encoding": 'IOB1',
-        "constrain_crf_encoding", true,
+        "constrain_crf_decoding": true,
         "hard_constraints": ["type"],
         "soft_constraints": {"attr": attr_penalty}
     }

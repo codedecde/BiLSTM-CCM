@@ -51,7 +51,8 @@ class ConstrainedConditionalModule(Registrable):
     def ccm_decode(
         self, logits: np.array, transitions: np.array,
         start_transitions: Optional[np.array] = None,
-        end_transitions: Optional[np.array] = None
+        end_transitions: Optional[np.array] = None,
+        partial_labels: Optional[List[Tuple[int, int]]] = None
     ) -> List[int]:
         transitions, start_transitions, end_transitions = self.get_masked_transitions(
             transitions, start_transitions, end_transitions)
@@ -121,6 +122,13 @@ class ConstrainedConditionalModule(Registrable):
                     expr += cp.sum(variables[six][:, index])
             constraints.append(expr >= 1)
 
+        # now the partially labeled examples
+        if partial_labels:
+            for pos, label in partial_labels:
+                expr = 0
+                expr += variables[pos][label] if pos == 0 else cp.sum(variables[pos][:, label])
+                constraints.append(expr >= 1)
+
         # the final optimization problem
         prob = cp.Problem(objective, constraints)
         prob.solve(solver=cp.GLPK_MI)
@@ -143,12 +151,14 @@ class ConstrainedConditionalModule(Registrable):
     def ccm_tags(self, logits: np.ndarray, mask: np.ndarray,
                  transitions: np.ndarray,
                  start_transitions: Optional[np.array] = None,
-                 end_transitions: Optional[np.array] = None) -> List[List[int]]:
+                 end_transitions: Optional[np.array] = None,
+                 partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> List[List[int]]:
         lengths = mask.astype(int).sum(-1)
         predicted_tags: List[List[int]] = []
         for ix in range(logits.shape[0]):
+            example_partial_labels = partial_labels[ix] if partial_labels else None
             pred_val = self.ccm_decode(logits[ix, :lengths[ix], :], transitions,
-                                       start_transitions, end_transitions)
+                                       start_transitions, end_transitions, example_partial_labels)
             predicted_tags.append(pred_val)
             assert len(pred_val) == lengths[ix]
         return predicted_tags

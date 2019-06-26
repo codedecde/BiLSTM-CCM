@@ -94,3 +94,14 @@ class TestCcmModule(object):
         ccm_module = ConstrainedConditionalModule(5, hard_constraints={"PER": [0, 1]})
         hard_tags = ccm_module.ccm_tags(logits, mask, transitions, start_transitions, end_transitions)
         assert soft_tags == hard_tags
+
+    def test_partial_labels(
+        self, logits, mask, transitions, start_transitions, end_transitions
+    ) -> None:
+        ccm_module = ConstrainedConditionalModule(5, soft_constraints={"PER": ([0, 1], 0.0001)})
+        partial_labels = [[(1, 0)], [(0, 1), (1, 2)]]
+        predicted_tags = ccm_module.ccm_tags(
+            logits, mask, transitions, start_transitions, end_transitions, partial_labels
+        )
+        assert predicted_tags[0][1] == 0
+        assert predicted_tags[1] == [1, 2]

@@ -1,0 +1,185 @@
+Hi null NOUN NA <UNK>
+, null nn Hi <UNK>
+planning G278 , Hi <UNK>
+for G155 vbg planning <UNK>
+next G150 ADJ in DESC_PHRASE planning O
+year G149 NOUN jj DESC_PHRASE next O
+. G472 nn year <UNK>
+We null . year <UNK>
+are G58 prp We <UNK>
+staying G319 vbp We <UNK>
+in G150 vbg staying <UNK>
+an G78 in staying <UNK>
+apartment G344 NOUN dt TYPE_INDICATOR_BASED_ON_VB staying NUM_2 IN_LOC_INDICATOR NN <UNK>
+in G150 nn apartment <UNK>
+Paphos null NOUN_P FIRST_CHAR_CAPS in apartment PREDICTED_ATTR_BY_FEAT LOCATION IN_LOC_INDICATOR NNP <UNK>
+June null DATE NOUN_P FIRST_CHAR_CAPS nnp Paphos PREDICTED_ATTR_BY_FEAT O
+2015 G170 DATE IS_NUMBER nnp June O
+but G224 wordAfterNUM cd 2015 <UNK>
+coming G150 cc 2015 <UNK>
+to G58 vbg coming <UNK>
+Protaras null NOUN_P FIRST_CHAR_CAPS to coming GOING_LOC_INDICATOR NNP location
+for G155 nnp Protaras <UNK>
+a G180 in Protaras <UNK>
+weekend G472 NOUN dt Protaras NUM_2 <UNK>
+break G138 NOUN nn WH_INDUCED_TARGET weekend <UNK>
+to G58 nn WH_INDUCED_TARGET break attr
+celebrate G25 to WH_INDUCED_TARGET break attr
+our G278 vb celebrate attr
+anniversary G21 NOUN prp$ celebrate attr
+. G472 nn anniversary <UNK>
+Looking null . anniversary <UNK>
+for G155 vbg Looking <UNK>
+a G180 in Looking <UNK>
+weekend G472 NOUN dt Looking NUM_2 PREDICTED_ATTR_BY_FEAT <UNK>
+hotel G246 NOUN nn TYPE_INDICATOR_BASED_ON_VB weekend type
+/ G261 nn hotel <UNK>
+apartment G344 NOUN : TYPE_INDICATOR_BASED_ON_VB / NUM_2 type
+preferably G462 nn apartment <UNK>
+not G428 rb preferably <UNK>
+in G150 rb preferably <UNK>
+the G76 in preferably <UNK>
+heart G143 NOUN dt preferably PREDICTED_ATTR_BY_FEAT IN_LOC_INDICATOR NN <UNK>
+of G260 nn heart <UNK>
+the G76 in heart <UNK>
+action G138 NOUN dt heart PREDICTED_ATTR_BY_FEAT IN_LOC_INDICATOR NN <UNK>
+as G428 nn action <UNK>
+we G436 in action <UNK>
+prefer G462 prp action <UNK>
+to G58 vbp prefer <UNK>
+go G58 to prefer <UNK>
+to G58 vb go <UNK>
+the G76 to go <UNK>
+bars G177 NOUN dt go <UNK>
+at G295 nns bars <UNK>
+night G71 NOUN in bars TIME IN_LOC_INDICATOR NN <UNK>
+but G224 nn night <UNK>
+chill G91 NOUN cc night <UNK>
+through G211 nn chill <UNK>
+the G76 in chill <UNK>
+day G418 NOUN dt chill <UNK>
+. G472 nn day <UNK>
+I null . day <UNK>
+have G224 prp I <UNK>
+heard G491 vbp I <UNK>
+Pernera null NOUN_P FIRST_CHAR_CAPS vbn heard <UNK>
+( G324 nnp Pernera <UNK>
+not G428 NA ( <UNK>
+sure G316 ADJ rb ( <UNK>
+on G107 jj sure <UNK>
+spelling G310 NOUN in sure <UNK>
+) G178 nn spelling <UNK>
+is G391 NA ) <UNK>
+very G428 vbz ) <UNK>
+nice G490 ADJ rb ) <UNK>
+. G472 jj nice <UNK>
+Any null . nice <UNK>
+suggestions G389 NOUN dt Any <UNK>
+please G185 nns suggestions <UNK>
+Thanks null FIRST_CHAR_CAPS vb please <UNK>
+
+Hi null NOUN_P NUM_1 NA <UNK>
+There null FIRST_CHAR_CAPS nnp Hi <UNK>
+! G155 ex There <UNK>
+I null . There NUM_7 <UNK>
+'m G58 NUM_5 prp I <UNK>
+interested G123 ADJ vbp 'm <UNK>
+in G150 jj interested <UNK>
+doing G59 NUM_1 in interested <UNK>
+a G180 vbg interested <UNK>
+weekend G472 NOUN NUM_1 dt interested O
+away G138 nn weekend NUM_2 <UNK>
+later G18 rb away <UNK>
+this G224 rb later <UNK>
+summer G439 DATE NOUN NUM_1 dt later <UNK>
+and G187 nn summer <UNK>
+I null FIRST_CHAR_CAPS cc summer NUM_7 <UNK>
+would G58 prp I NUM_2 <UNK>
+like G462 md would <UNK>
+to G58 vb like attr
+take G449 to like attr
+my G63 vb take attr
+dog G176 NOUN NUM_1 prp$ TYPE_INDICATOR_BASED_ON_VB take attr
+with G180 nn dog attr
+me G185 in dog attr
+( G324 prp dog <UNK>
+10 G324 IS_NUMBER NUM_1 NA ( <UNK>
+pound G281 NOUN wordAfterNUM NUM_1 cd 10 <UNK>
+Italian null FIRST_CHAR_CAPS NUM_1 ADJ nn DESC_PHRASE pound <UNK>
+Greyhound null NOUN_P FIRST_CHAR_CAPS NUM_1 jj DESC_PHRASE Italian <UNK>
+) G178 nnp Greyhound <UNK>
+. G472 NA ) <UNK>
+I null . ) NUM_7 <UNK>
+'m G58 NUM_5 prp I <UNK>
+hoping G316 NUM_1 vbp 'm <UNK>
+to G58 vbg hoping <UNK>
+find G125 to hoping <UNK>
+somewhere G210 vb find <UNK>
+less G428 ADJ rb somewhere location
+than G86 jjr less location
+3 G324 IS_NUMBER in less location
+hours G339 NOUN wordAfterNUM NUM_1 cd 3 location
+away G138 nns hours NUM_2 location
+from G449 rb away location
+Pittsburgh null NOUN_P FIRST_CHAR_CAPS NUM_1 in away LOCATION location
+. G472 nnp Pittsburgh <UNK>
+Anyone null NOUN . Pittsburgh <UNK>
+have G224 nn Anyone <UNK>
+a G180 vbp Anyone <UNK>
+suggestion G389 NOUN NUM_1 dt Anyone <UNK>
+? null nn suggestion <UNK>
+I null . suggestion NUM_7 <UNK>
+'m G58 NUM_5 prp I <UNK>
+looking G70 NUM_1 vbp 'm <UNK>
+for G155 vbg looking <UNK>
+places G81 NOUN in looking type
+that G224 nns places attr
+are G58 wdt places attr
+pet G176 NUM_1 ADJ vbp places PREDICTED_ATTR_BY_FEAT attr
+friendly G282 NUM_1 ADJ jj pet PREDICTED_ATTR_BY_FEAT attr
+, null jj friendly <UNK>
+maybe G210 NUM_2 , friendly <UNK>
+an G78 rb maybe <UNK>
+off G285 ADJ dt DESC_PHRASE maybe PREDICTED_ATTR_BY_FEAT <UNK>
+leash G176 NOUN NUM_1 jj DESC_PHRASE maybe PREDICTED_ATTR_BY_FEAT <UNK>
+area G248 NOUN nn leash PREDICTED_ATTR_BY_FEAT <UNK>
+or G261 nn area <UNK>
+cool G202 NUM_1 ADJ cc DESC_PHRASE area PREDICTED_ATTR_BY_FEAT <UNK>
+park G479 NOUN NUM_1 jj DESC_PHRASE cool PREDICTED_ATTR_BY_FEAT <UNK>
+. G472 nn park <UNK>
+I null . park NUM_7 <UNK>
+was G118 prp I <UNK>
+thinking G316 NUM_1 vbd I <UNK>
+maybe G210 NUM_2 vbg thinking <UNK>
+Erie null NOUN_P FIRST_CHAR_CAPS NUM_1 rb maybe ORGANIZATION <UNK>
+, null nnp Erie <UNK>
+but G224 , Erie <UNK>
+I null FIRST_CHAR_CAPS cc Erie NUM_7 <UNK>
+'m G58 NUM_5 prp I <UNK>
+up G18 vbp 'm <UNK>
+for G155 rp 'm <UNK>
+anything G402 NOUN in 'm <UNK>
+. G472 nn anything <UNK>
+Finally null NUM_1 . anything <UNK>
+, null rb Finally <UNK>
+I null FIRST_CHAR_CAPS , Finally NUM_7 <UNK>
+'m G58 NUM_5 prp I <UNK>
+not G428 vbp 'm <UNK>
+a G180 rb 'm <UNK>
+camper G131 NOUN NUM_1 dt 'm <UNK>
+. G472 nn camper <UNK>
+So null . camper <UNK>
+it G224 in So <UNK>
+would G58 prp So NUM_2 <UNK>
+have G224 md would <UNK>
+to G58 vb would <UNK>
+be G58 to would <UNK>
+something G490 NOUN vb would <UNK>
+that G224 nn something <UNK>
+does G174 wdt something <UNK>
+n't G49 NUM_1 vbz something <UNK>
+involve G334 NUM_1 rb n't <UNK>
+tents G131 NOUN NUM_1 vb involve <UNK>
+. G472 nns tents <UNK>
+Thanks null NOUN NUM_1 . tents <UNK>
+! G155 nns Thanks <UNK>

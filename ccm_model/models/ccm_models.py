@@ -5,7 +5,8 @@ import torch
 from torch.nn.modules.linear import Linear
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import Vocabulary, Instance
+from allennlp.data.dataset import Batch
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules import ConditionalRandomField, FeedForward
 from allennlp.modules.conditional_random_field import allowed_transitions
@@ -234,6 +235,42 @@ class CcmModel(Model):
             output["words"] = [x["words"] for x in metadata]
         return output
 
+    def get_ccm_labels(self, output_dict: Dict[str, torch.Tensor],
+                       partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> List[List[int]]:
+        _start_transitions = self.crf.start_transitions \
+            if hasattr(self.crf, "start_transitions") else None
+        _end_transitions = self.crf.end_transitions \
+            if hasattr(self.crf, "end_transitions") else None
+        logits, mask, transitions, start_transitions, end_transitions = [
+            (x.numpy() if isinstance(x, torch.Tensor) else x)
+            for x in Metric.unwrap_to_tensors(
+                output_dict["logits"], output_dict["mask"], self.crf.transitions,
+                _start_transitions, _end_transitions
+            )
+        ]
+        return self._ccm_decoder.ccm_tags(
+            logits, mask, transitions, start_transitions, end_transitions, partial_labels
+        )
+
+    @overrides
+    def forward_on_instances(self, instances: List[Instance],
+                             partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> List[str]:
+        if partial_labels is not None:
+            assert len(instances) == len(partial_labels)
+        
+        batch = Batch(instances)
+        batch.index_instances(self.vocab)
+        cuda_device = self._get_prediction_device()
+        model_input = util.move_to_device(batch.as_tensor_dict(), cuda_device)
+        output_dict = self.forward(**model_input)
+        tag_indices = self.get_ccm_labels(output_dict, partial_labels)
+        tags = [
+            [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
+             for tag in tag_list]
+            for tag_list in tag_indices
+        ]
+        return tags
+
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -242,20 +279,7 @@ class CcmModel(Model):
         """
         tag_indices: List[List[int]] = []
         if self._ccm_decoder is not None:
-            _start_transitions = self.crf.start_transitions \
-                if hasattr(self.crf, "start_transitions") else None
-            _end_transitions = self.crf.end_transitions \
-                if hasattr(self.crf, "end_transitions") else None
-            logits, mask, transitions, start_transitions, end_transitions = [
-                (x.numpy() if isinstance(x, torch.Tensor) else x)
-                for x in Metric.unwrap_to_tensors(
-                    output_dict["logits"], output_dict["mask"], self.crf.transitions,
-                    _start_transitions, _end_transitions
-                )
-            ]
-            tag_indices: List[List[int]] = self._ccm_decoder.ccm_tags(
-                logits, mask, transitions, start_transitions, end_transitions
-            )
+            tag_indices: List[List[int]] = self.get_ccm_labels(output_dict)
         else:
             tag_indices = output_dict["tags"]
         output_dict["tags"] = [

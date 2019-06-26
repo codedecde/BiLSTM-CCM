@@ -67,7 +67,8 @@ class HandCraftedFeatureReader(DatasetReader):
     def text_to_instance(self,
                          tokens: List[str],
                          features: List[List[str]],
-                         tags: Optional[List[str]] = None):
+                         tags: Optional[List[str]] = None,
+                         tag_label_namespace: Optional[str] = None):
         # pylint: disable=arguments-differ
         tokens: List[Token] = [Token(x) for x in tokens]
         sequence = TextField(tokens, self._token_indexers)
@@ -83,9 +84,10 @@ class HandCraftedFeatureReader(DatasetReader):
                                                 skip_indexing=True, num_labels=len(self._features_index_map)))
         instance_fields["features"] = ListField(feature_list)
         if tags:
+            tag_label_namespace = tag_label_namespace or self.label_namespace
             converted_tags: List[str] = self.convert_tags(tags)
             instance_fields["tags"] = SequenceLabelField(converted_tags,
-                                                         sequence, self.label_namespace)
+                                                         sequence, tag_label_namespace)
         return Instance(instance_fields)
 
     @staticmethod
@@ -96,3 +98,22 @@ class HandCraftedFeatureReader(DatasetReader):
         for tag in tags:
             new_tags.append(f"I-{tag}" if tag != "O" else tag)
         return new_tags
+
+    def read_partial(self, file_path: str):
+        instances: List[Instance] = []
+        with open(file_path, "r") as data_file:
+            logger.info("Reading instances from lines in file at: %s", file_path)
+            for is_divider, lines in itertools.groupby(data_file, _is_divider):
+                if not is_divider:
+                    fields = [line.strip().split() for line in lines]
+                    tokens: List[str] = []
+                    tags: List[str] = []
+                    features: List[List[str]] = []
+                    for field in fields:
+                        tokens.append(field[0])
+                        tags.append(field[-1])
+                        features.append(field[1:-1])
+                    instances.append(self.text_to_instance(
+                        tokens=tokens, features=features, tags=tags,
+                        tag_label_namespace="partial_labels"))
+        return instances
