@@ -23,6 +23,7 @@ local num_features = 282;
     "label_encoding": "IOB1",
     "constrain_crf_decoding": true,
     "calculate_span_f1": true,
+    "num_features": 282,
     "dropout": 0.5,
     "include_start_end_transitions": false,
     "text_field_embedder": {

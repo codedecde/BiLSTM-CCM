@@ -155,7 +155,7 @@ def train_single(config: Params,
     metric, should_decrease = trainer._validation_metric, trainer._metric_tracker._should_decrease
     patience = trainer._metric_tracker._patience
     bad_epochs = -1
-    num_epochs = 20
+    num_epochs = 5
     model = trainer.model
     metrics = get_metrics(trainer)
     originalModel = ModelData(metric=metrics[metric], weights=model.state_dict())

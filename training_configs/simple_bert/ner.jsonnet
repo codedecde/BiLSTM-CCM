@@ -35,8 +35,7 @@ local bert_embedding_dim = 768;
         "input_dim": bert_embedding_dim
     },
     "calculate_span_f1": true,
-    "label_encoding": "IOB1",
-    "label_namespace": "tags"
+    "label_encoding": "IOB1"
   },
   "iterator": {
     "type": "basic",

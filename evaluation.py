@@ -363,19 +363,19 @@ class Evaluator(object):
         write_buf += '\t   PREC: %.4f\n' % self._precision_list[0]
         write_buf += '\t    REC: %.4f\n' % self._recall_list[0]
         write_buf += '\t FSCORE: %.4f\n' % (
-            2 * self._precision_list[0] * self._recall_list[0] / (self._precision_list[0] + self._recall_list[0]))
+            2 * self._precision_list[0] * self._recall_list[0] / (self._precision_list[0] + self._recall_list[0] + 1e-6))
 
         write_buf += 'ATTR: \n'
         write_buf += '\t   PREC: %.4f\n' % self._precision_list[1]
         write_buf += '\t    REC: %.4f\n' % self._recall_list[1]
         write_buf += '\t FSCORE: %.4f\n' % (
-            2 * self._precision_list[1] * self._recall_list[1] / (self._precision_list[1] + self._recall_list[1]))
+            2 * self._precision_list[1] * self._recall_list[1] / (self._precision_list[1] + self._recall_list[1] + 1e-6))
 
         write_buf += 'LOCATION: \n'
         write_buf += '\t   PREC: %.4f\n' % self._precision_list[2]
         write_buf += '\t    REC: %.4f\n' % self._recall_list[2]
         write_buf += '\t FSCORE: %.4f\n' % (
-            2 * self._precision_list[2] * self._recall_list[2] / (self._precision_list[2] + self._recall_list[2]))
+            2 * self._precision_list[2] * self._recall_list[2] / (self._precision_list[2] + self._recall_list[2] + 1e-6))
 
         if self.temporal:
             write_buf += 'TEMPORAL: \n'
@@ -390,27 +390,27 @@ class Evaluator(object):
                 write_buf += '\t FSCORE: NAN\n'
 
         write_buf += '----------------------  WEIGHTED  ---------------------\n'
-
+        tol = 1e-6
         write_buf += 'TYPE: \n'
         write_buf += '\t   PREC: %.4f\n' % self.average_per_post_precision_list[0]
         write_buf += '\t    REC: %.4f\n' % self.average_per_post_recall_list[0]
         write_buf += '\t FSCORE: %.4f\n' % (
             (2 * self.average_per_post_precision_list[0] * self.average_per_post_recall_list[0]) /
-            (self.average_per_post_precision_list[0] + self.average_per_post_recall_list[0]))
+            (self.average_per_post_precision_list[0] + self.average_per_post_recall_list[0] + 1e-6))
 
         write_buf += 'ATTR: \n'
         write_buf += '\t   PREC: %.4f\n' % self.average_per_post_precision_list[1]
         write_buf += '\t    REC: %.4f\n' % self.average_per_post_recall_list[1]
         write_buf += '\t FSCORE: %.4f\n' % (
             (2 * self.average_per_post_precision_list[1] * self.average_per_post_recall_list[1]) /
-            (self.average_per_post_precision_list[1] + self.average_per_post_recall_list[1]))
+            (self.average_per_post_precision_list[1] + self.average_per_post_recall_list[1] + 1e-6))
 
         write_buf += 'LOCATION: \n'
         write_buf += '\t   PREC: %.4f\n' % self.average_per_post_precision_list[2]
         write_buf += '\t    REC: %.4f\n' % self.average_per_post_recall_list[2]
         write_buf += '\t FSCORE: %.4f\n' % (
             (2 * self.average_per_post_precision_list[2] * self.average_per_post_recall_list[2]) /
-            (self.average_per_post_precision_list[2] + self.average_per_post_recall_list[2]))
+            (self.average_per_post_precision_list[2] + self.average_per_post_recall_list[2] + 1e-6))
         if self.temporal:
             write_buf += 'TEMPORAL: \n'
             write_buf += '\t   PREC: %.4f\n' % self.average_per_post_precision_list[3]

@@ -55,7 +55,7 @@ local num_features = 282;
         "constrain_crf_decoding": true,
         "hard_constraints": ["type"],
         "soft_constraints": {"attr": attr_penalty},
-        "sentence_penalty_map": {"I-type": 50.}
+        "sentence_penalty_map": {"I-type": 50.0}
     }
   },
   "iterator": {
