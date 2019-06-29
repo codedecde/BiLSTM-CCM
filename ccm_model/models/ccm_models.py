@@ -233,6 +233,7 @@ class CcmModel(Model):
                 self._f1_metric(class_probabilities, tags, mask.float())
         if metadata is not None:
             output["words"] = [x["words"] for x in metadata]
+            output["sentence_markers"] = [x.get("sentence_markers", None) for x in metadata]
         return output
 
     def get_ccm_labels(self, output_dict: Dict[str, torch.Tensor],
@@ -248,8 +249,11 @@ class CcmModel(Model):
                 _start_transitions, _end_transitions
             )
         ]
+
         return self._ccm_decoder.ccm_tags(
-            logits, mask, transitions, start_transitions, end_transitions, partial_labels
+            logits=logits, mask=mask, transitions=transitions,
+            start_transitions=start_transitions, end_transitions=end_transitions,
+            partial_labels=partial_labels, sentence_boundaries=output_dict["sentence_markers"]
         )
 
     @overrides
@@ -257,7 +261,7 @@ class CcmModel(Model):
                              partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> List[str]:
         if partial_labels is not None:
             assert len(instances) == len(partial_labels)
-        
+
         batch = Batch(instances)
         batch.index_instances(self.vocab)
         cuda_device = self._get_prediction_device()

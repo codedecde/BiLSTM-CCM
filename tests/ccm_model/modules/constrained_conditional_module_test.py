@@ -1,7 +1,10 @@
 from __future__ import absolute_import
 import pytest
+from typing import List, Dict
 import numpy as np
 
+from allennlp.common import Params
+from allennlp.data import DatasetReader, Vocabulary
 from ccm_model.modules.constrained_conditional_module import ConstrainedConditionalModule
 
 
@@ -49,6 +52,36 @@ def start_transitions():
 @pytest.fixture(scope="module")
 def end_transitions():
     yield np.array([-0.1, -0.2, 0.3, -0.4, -0.4])
+
+
+@pytest.fixture(scope="module")
+def data_path() -> str:
+    yield "./data/Data_136_with_feats.txt"
+
+
+@pytest.fixture(scope="function")
+def sentence_marker_params() -> Params:
+    params = Params({
+        "type": "handcrafted_feature_reader",
+        "token_indexers": {
+            "tokens": "single_id"
+        },
+        "features_index_map": "./data/features.txt",
+        "use_sentence_markers": True
+    })
+    yield params
+
+
+@pytest.fixture(scope="function")
+def ccm_params() -> Params:
+    params = Params({
+        "hard_constraints": ["type"],
+        "soft_constraints": {"attr": 7.86},
+        "sentence_penalty_map": {"I-type": 50.},
+        "constrain_crf_decoding": True,
+        "label_encoding": "IOB1"
+    })
+    yield params
 
 
 class TestCcmModule(object):
@@ -105,3 +138,28 @@ class TestCcmModule(object):
         )
         assert predicted_tags[0][1] == 0
         assert predicted_tags[1] == [1, 2]
+
+    def test_sentence_markers(self, logits, mask, transitions, start_transitions, end_transitions) -> None:
+        ccm_module = ConstrainedConditionalModule(
+            5, hard_constraints={"PER": [1]}, sentence_penalty_map=(1, 0.))
+        # test no penalty
+
+        sentence_boundaries: List[List[int]] = [[2, 3], [1, 2]]
+        p1 = ccm_module.ccm_tags(logits, mask, transitions, start_transitions, end_transitions,
+                                 sentence_boundaries=sentence_boundaries)
+        p2 = ccm_module.ccm_tags(logits, mask, transitions, start_transitions, end_transitions)
+        assert p1 == p2
+        # test with penalty
+        ccm_module = ConstrainedConditionalModule(
+            5, hard_constraints={"PER": [1]}, sentence_penalty_map=(1, 50.))
+        p3 = ccm_module.ccm_tags(logits, mask, transitions, start_transitions, end_transitions,
+                                 sentence_boundaries=sentence_boundaries)
+        assert p3 == p1
+
+    def test_from_params(self, data_path: str, sentence_marker_params: Params, ccm_params: Params) -> None:
+        reader = DatasetReader.from_params(sentence_marker_params)
+        instances = reader.read(data_path)
+        vocab = Vocabulary.from_instances(instances)
+        ccm_module = ConstrainedConditionalModule.from_params(vocab=vocab, params=ccm_params)
+        index = vocab.get_token_index("I-type", "labels")
+        assert ccm_module._sentence_penalty_map == (index, 50.)

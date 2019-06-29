@@ -1,10 +1,11 @@
 from __future__ import absolute_import
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import argparse
 from copy import deepcopy
 import os
 import tqdm
 import re
+import torch
 import random
 
 from allennlp.data import DatasetReader, Instance, Vocabulary
@@ -63,7 +64,7 @@ def post_process_prediction(prediction: JsonDict) -> List[str]:
 def train_single(config: Params,
                  instances: List[Instance],
                  index: int,
-                 cuda_device: int) -> List[str]:
+                 cuda_device: int) -> Tuple[List[str], Model]:
     instances = deepcopy(instances)
     config = deepcopy(config)
     test_instance = instances[index]
@@ -77,7 +78,7 @@ def train_single(config: Params,
     model = trainer.model
     model.eval()
     prediction = sanitize(model.forward_on_instance(test_instance))
-    return post_process_prediction(prediction)
+    return post_process_prediction(prediction), model.cpu()
 
 
 def serial_processing(instances: List[Instance], config: Params, device: int,
@@ -86,9 +87,14 @@ def serial_processing(instances: List[Instance], config: Params, device: int,
     start_index = start_index or 0
     end_index = end_index or len(instances)
     for index in tqdm.tqdm(range(start_index, end_index)):
-        prediction = train_single(config, instances, index, device)
+        prediction, model = train_single(config, instances, index, device)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
+        if index == end_index - 1:
+            model_save_path = os.path.join(
+                serialization_dir, f"best_model_start_index_{start_index}_end_index_{end_index}.th"
+            )
+            torch.save(model.state_dict(), model_save_path)
 
 
 def main(args) -> None:

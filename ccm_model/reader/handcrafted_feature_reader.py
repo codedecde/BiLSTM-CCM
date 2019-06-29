@@ -11,6 +11,8 @@ from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.fields import TextField, SequenceLabelField, Field, MetadataField, \
     MultiLabelField, ListField
 
+from ccm_model.reader.utils import get_sentence_markers_from_tokens
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +29,8 @@ class HandCraftedFeatureReader(DatasetReader):
                  feature_label_namespace: str = "feature_labels",
                  lazy: bool = False,
                  coding_scheme: str = "IOB1",
-                 label_namespace: str = "labels") -> None:
+                 label_namespace: str = "labels",
+                 use_sentence_markers: bool = False) -> None:
         super(HandCraftedFeatureReader, self).__init__(lazy=lazy)
         self._token_indexers = token_indexers
         self.label_namespace = label_namespace
@@ -43,6 +46,7 @@ class HandCraftedFeatureReader(DatasetReader):
             self._features_index_map = features_index_map
         self._coding_scheme = coding_scheme
         self.feature_label_namespace = feature_label_namespace
+        self._use_sentence_markers = use_sentence_markers
 
     @overrides
     def _read(self, file_path: str) -> List[Instance]:
@@ -73,7 +77,11 @@ class HandCraftedFeatureReader(DatasetReader):
         tokens: List[Token] = [Token(x) for x in tokens]
         sequence = TextField(tokens, self._token_indexers)
         instance_fields: Dict[str, Field] = {"tokens": sequence}
-        instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
+        metadata = {"words": [x.text for x in tokens]}
+        if self._use_sentence_markers:
+            sentence_markers = get_sentence_markers_from_tokens(tokens)
+            metadata["sentence_markers"] = sentence_markers
+        instance_fields["metadata"] = MetadataField(metadata)
         # now encode the features
         feature_list: List[MultiLabelField] = []
         for feature in features:

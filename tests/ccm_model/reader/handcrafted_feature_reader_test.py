@@ -8,6 +8,8 @@ from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
+from ccm_model.reader.utils import get_sentences_from_markers
+
 
 @pytest.fixture(scope="module")
 def data_path() -> str:
@@ -27,6 +29,19 @@ def params() -> Params:
             "tokens": "single_id"
         },
         "features_index_map": "./data/features.txt"
+    })
+    yield params
+
+
+@pytest.fixture(scope="function")
+def sentence_marker_params() -> Params:
+    params = Params({
+        "type": "handcrafted_feature_reader",
+        "token_indexers": {
+            "tokens": "single_id"
+        },
+        "features_index_map": "./data/features.txt",
+        "use_sentence_markers": True
     })
     yield params
 
@@ -56,3 +71,13 @@ class TestHandCraftedFeatureReader(object):
         assert "partial_labels" in vocab._token_to_index
         assert set(vocab.get_token_to_index_vocabulary("partial_labels").keys()) == \
             set(["I-<UNK>", "O", "I-type", "I-attr", "I-location"])
+
+    def test_sentence_markers(self, data_path: str, sentence_marker_params: Params) -> None:
+        reader = DatasetReader.from_params(sentence_marker_params)
+        instances = reader.read(data_path)
+        # vocab = Vocabulary.from_instances(instances)
+        for instance in instances:
+            tokens = instance["tokens"]
+            sentence_markers = instance["metadata"]["sentence_markers"]
+            sentences = get_sentences_from_markers(tokens, sentence_markers)
+            assert sum(len(x) for x in sentences) == len(tokens) == sentence_markers[-1]
