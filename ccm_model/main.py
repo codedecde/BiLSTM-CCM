@@ -15,7 +15,7 @@ from allennlp.models import Model
 from allennlp.training import Trainer
 from allennlp.common.util import JsonDict
 
-from utils import read_from_config_file
+from utils import read_from_config_file, bool_flag
 from allennlp.common.util import sanitize
 
 
@@ -30,6 +30,7 @@ def get_arguments() -> argparse.Namespace:
 
     parser.add_argument("-six", "--start_index", type=int, required=False, default=None)
     parser.add_argument("-eix", "--end_index", type=int, required=False, default=None)
+    parser.add_argument("--save_model", type=bool_flag, required=False, default=False)
     args = parser.parse_args()
     return args
 
@@ -83,14 +84,15 @@ def train_single(config: Params,
 
 def serial_processing(instances: List[Instance], config: Params, device: int,
                       serialization_dir: str, start_index: Optional[int] = None,
-                      end_index: Optional[int] = None) -> None:
+                      end_index: Optional[int] = None,
+                      save_model: bool = False) -> None:
     start_index = start_index or 0
     end_index = end_index or len(instances)
     for index in tqdm.tqdm(range(start_index, end_index)):
         prediction, model = train_single(config, instances, index, device)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
-        if index == end_index - 1:
+        if index == end_index - 1 and save_model:
             model_save_path = os.path.join(
                 serialization_dir, f"best_model_start_index_{start_index}_end_index_{end_index}.th"
             )
@@ -106,7 +108,8 @@ def main(args) -> None:
     data_file_path = config.pop("all_data_path")
     instances = reader.read(data_file_path)
     serial_processing(instances, config, args.devices[0],
-                      serialization_dir, args.start_index, args.end_index)
+                      serialization_dir, args.start_index, args.end_index,
+                      args.save_model)
 
 
 if __name__ == "__main__":
