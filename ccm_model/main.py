@@ -78,7 +78,7 @@ def train_single(config: Params,
     model = trainer.model
     model.eval()
     prediction = sanitize(model.forward_on_instance(test_instance))
-    return post_process_prediction(prediction), model.cpu()
+    return prediction, model.cpu()
 
 
 def serial_processing(instances: List[Instance], config: Params, device: int,
