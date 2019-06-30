@@ -267,6 +267,13 @@ class Post(object):
         return write_buf
 
 
+def clean_predictions(predictions: List[List[str]]) -> List[List[str]]:
+    new_predictions: List[List[str]] = []
+    for tags in predictions:
+        new_predictions.append([re.sub(r"^.*-", "", tag) for tag in tags])
+    return new_predictions
+
+
 class Evaluator(object):
     def __init__(self, posts: List[Post], verbose: bool = True, temporal: bool = False) -> None:
         self.posts = posts
@@ -277,6 +284,7 @@ class Evaluator(object):
     def from_file(cls, pred_file_name: str, gold_file_name: str, verbose: bool = True) -> "Evaluator":
         posts = get_data_from_file(gold_file_name)
         predictions = get_data_from_file(pred_file_name)
+        predictions = clean_predictions(predictions)
         assert len(posts) == len(predictions)
         assert all([len(x) == len(y) for x, y in zip(posts, predictions)])
 
@@ -303,7 +311,7 @@ class Evaluator(object):
                 prediction = [x.strip() for x in f.readlines() if x.strip() != ""]
                 predictions[fno] = prediction
                 assert len(predictions[fno]) == len(posts[fno])
-
+        predictions = clean_predictions(predictions)
         new_posts = [None for idx in range(len(posts))]
         for idx, (_post, _prediction) in enumerate(zip(posts, predictions)):
             new_posts[idx] = Post()
