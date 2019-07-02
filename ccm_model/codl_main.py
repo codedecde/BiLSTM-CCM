@@ -22,7 +22,7 @@ from allennlp.nn import util
 from allennlp.common.util import JsonDict
 from allennlp.training import util as training_util
 
-from utils import read_from_config_file
+from utils import read_from_config_file, bool_flag
 from allennlp.common.util import sanitize
 
 
@@ -43,6 +43,7 @@ def get_arguments() -> argparse.Namespace:
 
     parser.add_argument("-six", "--start_index", type=int, required=False, default=None)
     parser.add_argument("-eix", "--end_index", type=int, required=False, default=None)
+    parser.add_argument("--save_model", type=bool_flag, required=False, default=False)
     args = parser.parse_args()
     return args
 
@@ -202,16 +203,21 @@ def serial_processing(instances: List[Instance],
                       reader: DatasetReader,
                       config: Params, device: int,
                       serialization_dir: str, start_index: Optional[int] = None,
-                      end_index: Optional[int] = None) -> None:
+                      end_index: Optional[int] = None,
+                      save_model: bool = False) -> None:
     start_index = start_index or 0
     end_index = end_index or len(instances)
     for index in tqdm.tqdm(range(start_index, end_index)):
         prediction, model = train_single(config, instances, partially_labeled_instances, reader, index, device)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
-        if index == end_index - 1:
+        if index == end_index - 1 and save_model:
+            model_dir = os.path.join(serialization_dir, f"start_{start_index}_end_{end_index}")
+            os.makedirs(model_dir, exists_ok=True)
+            vocab = model.vocab
+            vocab.save_to_files(os.path.join(model_dir, "vocabulary"))
             model_save_path = os.path.join(
-                serialization_dir, f"best_model_start_index_{start_index}_end_index_{end_index}.th"
+                model_dir, f"best.th"
             )
             torch.save(model.state_dict(), model_save_path)
 
@@ -227,7 +233,7 @@ def main(args) -> None:
     instances = reader.read(data_file_path)
     partial_instances = reader.read_partial(partially_labeled_data_path)
     serial_processing(instances, partial_instances, reader, config, args.devices[0],
-                      serialization_dir, args.start_index, args.end_index)
+                      serialization_dir, args.start_index, args.end_index, args.save_model)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use
 import pytest
 from typing import List
+import re
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
@@ -54,6 +55,17 @@ class TestHandCraftedFeatureReader(object):
     def test_can_read_instances(self, data_path: str, params: Params) -> None:
         reader = DatasetReader.from_params(params)
         instances = reader.read(data_path)
+        instance_number = 34
+        tmp_path = f"./data/instance_{instance_number}.txt"
+        with open(tmp_path, "w") as fil:
+            tokens = instances[instance_number]["tokens"].tokens
+            labels = instances[instance_number]["tags"].labels
+            labels = [re.sub(r"^.*-", "", tag) for tag in labels]
+            assert len(tokens) == 86
+            write_text_buf: List[str] = []
+            for token, label in zip(tokens, labels):
+                write_text_buf.append(f"{token.text} {label}")
+            fil.write("\n".join(write_text_buf))
         assert len(instances) == 136
         vocab = Vocabulary.from_instances(instances)
         batch_size = 32
