@@ -92,9 +92,17 @@ def serial_processing(instances: List[Instance], config: Params, device: int,
         prediction, model = train_single(config, instances, index, device)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
-        if index == end_index - 1 and save_model:
+        if index == end_index - 1 and save_model is True:
+            model_dir = os.path.join(
+                serialization_dir, f"start_{start_index}_end_{end_index}")
+            os.makedirs(model_dir, exists_ok=True)
+            # save the vocab
+            vocab_dir = os.path.join(model_dir, "vocab")
+            os.makedirs(vocab_dir, exists_ok=True)
+            model.vocab.save_to_files(vocab_dir)
+            # save the model
             model_save_path = os.path.join(
-                serialization_dir, f"best_model_start_index_{start_index}_end_index_{end_index}.th"
+                model_dir, "best.th"
             )
             torch.save(model.state_dict(), model_save_path)
 

@@ -47,6 +47,13 @@ class HandCraftedFeatureReader(DatasetReader):
         self._coding_scheme = coding_scheme
         self.feature_label_namespace = feature_label_namespace
         self._use_sentence_markers = use_sentence_markers
+        self._train = True
+
+    def eval(self):
+        self._train = False
+
+    def train(self):
+        self._train = True
 
     @overrides
     def _read(self, file_path: str) -> List[Instance]:
@@ -63,6 +70,7 @@ class HandCraftedFeatureReader(DatasetReader):
                         tokens.append(field[0])
                         tags.append(field[-1])
                         features.append(field[1:-1])
+                    tags = tags if self._train else None
                     instances.append(self.text_to_instance(
                         tokens=tokens, features=features, tags=tags))
         return instances
