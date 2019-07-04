@@ -50,6 +50,7 @@ def get_trainer_from_config(config: Params,
         vocab = Vocabulary.from_files(vocab_dir)
     model = Model.from_params(model_params, vocab=vocab)
     iterator = DataIterator.from_params(config.pop("iterator"))
+    trainer_params["num_serialized_models_to_keep"] = 1
     iterator.index_with(vocab)
     trainer = Trainer.from_params(
         model=model,
@@ -57,8 +58,7 @@ def get_trainer_from_config(config: Params,
         train_data=train_instances,
         validation_data=val_instances,
         serialization_dir=serialization_dir,
-        params=trainer_params,
-        num_serialized_models_to_keep=1)
+        params=trainer_params)
     return trainer
 
 
