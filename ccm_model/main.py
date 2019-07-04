@@ -38,11 +38,16 @@ def get_arguments() -> argparse.Namespace:
 def get_trainer_from_config(config: Params,
                             train_instances: List[Instance],
                             val_instances: List[Instance],
-                            device: int) -> Trainer:
+                            device: int,
+                            serialization_dir: Optional[str] = None) -> Trainer:
     trainer_params = config.pop("trainer")
     trainer_params["cuda_device"] = device
     model_params = config.pop("model")
-    vocab = Vocabulary.from_instances(train_instances)
+    vocab_dir = config.pop("vocab_dir", None)
+    if vocab_dir is None:
+        vocab = Vocabulary.from_instances(train_instances)
+    else:
+        vocab = Vocabulary.from_files(vocab_dir)
     model = Model.from_params(model_params, vocab=vocab)
     iterator = DataIterator.from_params(config.pop("iterator"))
     iterator.index_with(vocab)
@@ -51,8 +56,9 @@ def get_trainer_from_config(config: Params,
         iterator=iterator,
         train_data=train_instances,
         validation_data=val_instances,
-        serialization_dir=None,
-        params=trainer_params)
+        serialization_dir=serialization_dir,
+        params=trainer_params,
+        num_serialized_models_to_keep=1)
     return trainer
 
 
@@ -65,7 +71,8 @@ def post_process_prediction(prediction: JsonDict) -> List[str]:
 def train_single(config: Params,
                  instances: List[Instance],
                  index: int,
-                 cuda_device: int) -> Tuple[List[str], Model]:
+                 cuda_device: int,
+                 serialization_dir: Optional[str] = None) -> Tuple[List[str], Model]:
     instances = deepcopy(instances)
     config = deepcopy(config)
     test_instance = instances[index]
@@ -74,7 +81,7 @@ def train_single(config: Params,
     num_train_instances = int(0.9 * len(train_val_instances))
     train_instances = train_val_instances[:num_train_instances]
     val_instances = train_val_instances[num_train_instances:]
-    trainer = get_trainer_from_config(config, train_instances, val_instances, cuda_device)
+    trainer = get_trainer_from_config(config, train_instances, val_instances, cuda_device, serialization_dir)
     trainer.train()
     model = trainer.model
     model.eval()
@@ -89,22 +96,12 @@ def serial_processing(instances: List[Instance], config: Params, device: int,
     start_index = start_index or 0
     end_index = end_index or len(instances)
     for index in tqdm.tqdm(range(start_index, end_index)):
-        prediction, model = train_single(config, instances, index, device)
+        keep_model = (index == end_index - 1) and (save_model is True)
+        serialization_dir_passed = os.path.join(
+            serialization_dir, f"start_{start_index}_end_{end_index}_index_{index}") if keep_model else None
+        prediction, model = train_single(config, instances, index, device, serialization_dir_passed)
         with open(os.path.join(serialization_dir, f"prediction_{index}.txt"), "w") as f:
             f.write("\n".join(prediction))
-        if index == end_index - 1 and save_model is True:
-            model_dir = os.path.join(
-                serialization_dir, f"start_{start_index}_end_{end_index}")
-            os.makedirs(model_dir, exists_ok=True)
-            # save the vocab
-            vocab_dir = os.path.join(model_dir, "vocab")
-            os.makedirs(vocab_dir, exists_ok=True)
-            model.vocab.save_to_files(vocab_dir)
-            # save the model
-            model_save_path = os.path.join(
-                model_dir, "best.th"
-            )
-            torch.save(model.state_dict(), model_save_path)
 
 
 def main(args) -> None:
