@@ -2,6 +2,7 @@
 // BERT
 local bert_embedding_dim = 768;
 local num_features = 357;
+local sent_penalty = 4.52;
 {
   "dataset_reader": {
     "type": "handcrafted_feature_reader",
@@ -14,7 +15,8 @@ local num_features = 357;
           "do_lowercase": false,
           "use_starting_offsets": true
       }
-    }
+    },
+    "use_sentence_markers": true
   },
   "base_output_dir": "./trained_model_outputs/basic",
   "all_data_path": "./books-data/book.feb.2018.actor_replaced.full.gold",
@@ -52,7 +54,8 @@ local num_features = 357;
         "label_namespace": "labels",
         "label_encoding": 'IOB1',
         "constrain_crf_decoding": true,
-        "hard_constraints": ["type"]
+        "hard_constraints": ["type"],
+        "sentence_penalty_map": {"I-type": sent_penalty}
     }
   },
   "iterator": {
