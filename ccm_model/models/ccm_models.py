@@ -258,7 +258,7 @@ class CcmModel(Model):
 
     @overrides
     def forward_on_instances(self, instances: List[Instance],
-                             partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> List[str]:
+                             partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> List[List[str]]:
         if partial_labels is not None:
             assert len(instances) == len(partial_labels)
 
@@ -266,24 +266,20 @@ class CcmModel(Model):
         batch.index_instances(self.vocab)
         cuda_device = self._get_prediction_device()
         model_input = util.move_to_device(batch.as_tensor_dict(), cuda_device)
-        output_dict = self.forward(**model_input)
-        tag_indices = self.get_ccm_labels(output_dict, partial_labels)
-        tags = [
-            [self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
-             for tag in tag_list]
-            for tag_list in tag_indices
-        ]
-        return tags
+        output_dict = self.decode(self.forward(**model_input), partial_labels)
+
+        return output_dict["tags"]
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def decode(self, output_dict: Dict[str, torch.Tensor],
+               partial_labels: Optional[List[List[Tuple[int, int]]]] = None) -> Dict[str, torch.Tensor]:
         """
         Converts the tag ids to the actual tags.
         We use the CCM module here.
         """
         tag_indices: List[List[int]] = []
         if self._ccm_decoder is not None:
-            tag_indices: List[List[int]] = self.get_ccm_labels(output_dict)
+            tag_indices: List[List[int]] = self.get_ccm_labels(output_dict, partial_labels)
         else:
             tag_indices = output_dict["tags"]
         output_dict["tags"] = [
