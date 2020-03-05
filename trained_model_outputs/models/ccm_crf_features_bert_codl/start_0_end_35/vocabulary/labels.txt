@@ -1,0 +1,4 @@
+O
+I-attr
+I-type
+I-location

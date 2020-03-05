@@ -1,0 +1,1 @@
+python3.6 -m ccm_model.main --config_file training_configs/ccm_crf_features_bert/ner_type_attr.jsonnet --base_dir ./trained_model_outputs/ccm_crf_features_bert --devices 0 --start_index 0 --end_index 35
